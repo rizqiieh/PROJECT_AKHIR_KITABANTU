@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/time_zone_utils.dart';
@@ -20,9 +21,7 @@ void main() async {
 
   runApp(
     // ProviderScope diperlukan oleh flutter_riverpod (Bab 3 — State Management)
-    const ProviderScope(
-      child: KitaBantuApp(),
-    ),
+    const ProviderScope(child: KitaBantuApp()),
   );
 }
 
