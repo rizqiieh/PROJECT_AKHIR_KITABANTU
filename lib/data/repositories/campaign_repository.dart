@@ -142,9 +142,17 @@ class CampaignRepository {
     String? searchQuery,
   }) async {
     if (_supabase.isAvailable) {
-      final onlineCampaigns = await _supabase.fetchCampaigns();
+      // 1. Coba ambil data dari Supabase
+      var onlineCampaigns = await _supabase.fetchCampaigns();
+
+      // 2. Jika Supabase masih kosong, unggah data awal secara otomatis
+      if (onlineCampaigns.isEmpty) {
+        await _supabase.seedInitialCampaigns(_initialCampaigns);
+        onlineCampaigns = await _supabase.fetchCampaigns();
+      }
+
+      // 3. Sinkronkan ke daftar memori lokal
       if (onlineCampaigns.isNotEmpty) {
-        // Update memori lokal dengan data online
         for (var oc in onlineCampaigns) {
           final idx = _campaigns.indexWhere((c) => c.id == oc.id);
           if (idx != -1) {
@@ -167,7 +175,6 @@ class CampaignRepository {
       return matchCategory && matchQuery;
     }).toList();
   }
-
   /// Mengambil satu kampanye berdasarkan ID.
   Future<CampaignModel?> getCampaignById(String id) async {
     try {
