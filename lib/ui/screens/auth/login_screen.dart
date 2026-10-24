@@ -7,7 +7,8 @@ import 'package:kitabantu/ui/screens/home/main_shell.dart';
 
 /// Halaman Login & Biometrik dengan Desain Stitch AI (Sage Green).
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  final String? sessionExpiredMessage;
+  const LoginScreen({super.key, this.sessionExpiredMessage});
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -21,22 +22,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _rememberMe = false;
   bool _isLoading = false;
   bool _canBiometric = false;
-  bool _hasBiometricSession = false;
 
   @override
   void initState() {
     super.initState();
     _checkBiometric();
+    if (widget.sessionExpiredMessage != null && widget.sessionExpiredMessage!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.timer_off_outlined, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(widget.sessionExpiredMessage!)),
+                ],
+              ),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      });
+    }
   }
 
   Future<void> _checkBiometric() async {
     final notifier = ref.read(authProvider.notifier);
     final canUse = await notifier.canUseBiometric();
-    final storage = await notifier.canUseBiometric();
     if (mounted) {
       setState(() {
         _canBiometric = canUse;
-        _hasBiometricSession = storage;
       });
     }
   }
@@ -77,15 +95,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ],
                   ),
-                 child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Image.asset(
-                      'assets/images/LogoKitaBantu.png',
-                      fit: BoxFit.contain,
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Image.asset(
+                        'assets/images/LogoKitaBantu.png',
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
-                ),
                 ),
                 const SizedBox(height: 14),
 
@@ -288,51 +306,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ),
 
-                        // Pembatas / Teks Opsi Biometrik
-                        const SizedBox(height: 16),
-                        Row(
-                          children: const [
-                            Expanded(child: Divider(color: Color(0xFFE2E8F0), thickness: 0.8)),
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 10),
-                              child: Text(
-                                'atau masuk lebih cepat',
-                                style: TextStyle(fontSize: 11, color: Color(0xFF718096)),
+                        // Pembatas / Teks Opsi Biometrik (Hanya muncul jika perangkat mendukung)
+                        if (_canBiometric) ...[
+                          const SizedBox(height: 16),
+                          Row(
+                            children: const [
+                              Expanded(child: Divider(color: Color(0xFFE2E8F0), thickness: 0.8)),
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 10),
+                                child: Text(
+                                  'atau masuk lebih cepat',
+                                  style: TextStyle(fontSize: 11, color: Color(0xFF718096)),
+                                ),
+                              ),
+                              Expanded(child: Divider(color: Color(0xFFE2E8F0), thickness: 0.8)),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+
+                          // Tombol Biometrik
+                          SizedBox(
+                            width: double.infinity,
+                            height: 46,
+                            child: OutlinedButton(
+                              onPressed: _isLoading ? null : _handleBiometricLogin,
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.2),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                backgroundColor: Colors.white,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(Icons.fingerprint_rounded, color: Color(0xFF4A5568), size: 20),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Masuk dengan Biometrik',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF2D3748),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            Expanded(child: Divider(color: Color(0xFFE2E8F0), thickness: 0.8)),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-
-                        // Tombol Biometrik
-                        SizedBox(
-                          width: double.infinity,
-                          height: 46,
-                          child: OutlinedButton(
-                            onPressed: _isLoading ? null : _handleBiometricLogin,
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.2),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              backgroundColor: Colors.white,
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: const [
-                                Icon(Icons.fingerprint_rounded, color: Color(0xFF4A5568), size: 20),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Masuk dengan Biometrik',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF2D3748),
-                                  ),
-                                ),
-                              ],
-                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),

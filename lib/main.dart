@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/time_zone_utils.dart';
+import 'core/widgets/session_timeout_listener.dart';
 import 'data/remote/supabase_service.dart';
 import 'ui/screens/auth/splash_screen.dart';
 
@@ -30,13 +31,21 @@ void main() async {
 class KitaBantuApp extends StatelessWidget {
   const KitaBantuApp({super.key});
 
+  /// Global NavigatorKey untuk auto-logout saat session timeout terjadi
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'KitaBantu',
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: const SplashScreen(),
+      builder: (context, child) => SessionTimeoutListener(
+        child: child ?? const SizedBox.shrink(),
+      ),
     );
   }
 }

@@ -3,7 +3,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// Layanan penyimpanan sesi terenkripsi (RF-001 & RF-002).
 ///
 /// Menyimpan informasi sesi login ke Android Keystore / iOS Keychain
-/// sehingga aman dari akses langsung dan bertahan saat aplikasi ditutup.
+/// sehingga aman dari akses langsung dan bertahan saat aplikasi ditutup
+/// selama sesi belum kedaluwarsa (inactivity timeout 1 menit).
 class SecureStorageService {
   SecureStorageService._();
   static final SecureStorageService instance = SecureStorageService._();
@@ -18,6 +19,10 @@ class SecureStorageService {
   static const _keyFullName = 'session_full_name';
   static const _keyBiometricEnabled = 'session_biometric_enabled';
   static const _keyAvatarPath = 'session_avatar_path';
+  static const _keyLastActive = 'session_last_active';
+
+  /// Batas waktu kedaluwarsa sesi jika tidak ada aktivitas (1 menit = 60 detik).
+  static const int sessionTimeoutSeconds = 60;
 
   // ══════════════════════════════════════════════════════
   //  Simpan & Baca Sesi
@@ -37,6 +42,9 @@ class SecureStorageService {
     await _storage.write(
         key: _keyBiometricEnabled,
         value: biometricEnabled.toString());
+    await _storage.write(
+        key: _keyLastActive,
+        value: DateTime.now().millisecondsSinceEpoch.toString());
     if (avatarPath != null) {
       await _storage.write(key: _keyAvatarPath, value: avatarPath);
     }
@@ -88,6 +96,40 @@ class SecureStorageService {
     } else {
       await _storage.delete(key: _keyAvatarPath);
     }
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  Manajemen Timeout Sesi (Inactivity Timeout 1 Menit)
+  // ══════════════════════════════════════════════════════
+
+  /// Memperbarui timestamp aktivitas terakhir sesi (epoch milliseconds).
+  Future<void> updateLastActive() async {
+    await _storage.write(
+      key: _keyLastActive,
+      value: DateTime.now().millisecondsSinceEpoch.toString(),
+    );
+  }
+
+  /// Mengambil timestamp aktivitas terakhir dalam millisecondsSinceEpoch.
+  Future<int?> getLastActive() async {
+    final value = await _storage.read(key: _keyLastActive);
+    return value != null ? int.tryParse(value) : null;
+  }
+
+  /// Memeriksa apakah sesi telah kedaluwarsa (tidak ada aktivitas >= 1 menit).
+  ///
+  /// Mengembalikan true jika:
+  /// 1. Tidak ada sesi aktif (user ID belum login).
+  /// 2. Selisih waktu sekarang dengan aktivitas terakhir >= 60 detik.
+  Future<bool> isSessionExpired() async {
+    final hasSession = await hasActiveSession();
+    if (!hasSession) return true;
+
+    final lastActive = await getLastActive();
+    if (lastActive == null) return false;
+
+    final diffMs = DateTime.now().millisecondsSinceEpoch - lastActive;
+    return diffMs >= (sessionTimeoutSeconds * 1000);
   }
 
   // ══════════════════════════════════════════════════════
