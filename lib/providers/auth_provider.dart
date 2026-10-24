@@ -49,16 +49,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final _secure = SecureStorageService.instance;
   final _localAuth = LocalAuthentication();
 
-  // ── Cek sesi saat aplikasi dimulai ──
+  // ── Cek sesi saat aplikasi dimulai (RF-001 & Session Timeout) ──
 
   /// Memeriksa apakah ada sesi aktif di Secure Storage.
-  /// Dipanggil dari SplashScreen.
+  /// Dipanggil dari SplashScreen saat aplikasi dibuka kembali.
   Future<void> checkSession() async {
     state = state.copyWith(status: AuthStatus.loading);
 
     final hasSession = await _secure.hasActiveSession();
     if (!hasSession) {
       state = state.copyWith(status: AuthStatus.unauthenticated);
+      return;
+    }
+
+    // ── Periksa apakah sesi telah kedaluwarsa (>= 1 menit tanpa aktivitas) ──
+    final isExpired = await _secure.isSessionExpired();
+    if (isExpired) {
+      await _secure.clearSession();
+      state = state.copyWith(
+        status: AuthStatus.unauthenticated,
+        user: null,
+        errorMessage: 'Sesi telah berakhir karena tidak ada aktivitas selama 1 menit. Silakan login kembali.',
+      );
       return;
     }
 
@@ -75,6 +87,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return;
     }
 
+    // Sesi masih valid (< 1 menit)! Perbarui timestamp aktivitas terakhir
+    await _secure.updateLastActive();
     state = state.copyWith(status: AuthStatus.authenticated, user: user);
   }
 
@@ -132,14 +146,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return state.errorMessage;
     }
   }
+
   // ── Login dengan Password (RF-001) ──
+
   /// Login menggunakan username dan password.
   Future<String?> login({
     required String username,
     required String password,
   }) async {
     // Bypass khusus Flutter Web (Chrome) agar tidak memicu error SQLite
-   // Bypass khusus Flutter Web (Chrome) agar tidak memicu error SQLite
     if (kIsWeb) {
       state = state.copyWith(
         status: AuthStatus.authenticated,
@@ -200,9 +215,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   /// Login menggunakan sidik jari / wajah.
-  /// Hanya berhasil jika sesi sebelumnya masih ada di Secure Storage
-  /// dan biometrik diaktifkan.
-  // ── Login dengan Biometrik (RF-002) ──
   Future<String?> loginWithBiometric() async {
     state = state.copyWith(status: AuthStatus.loading);
 
@@ -313,12 +325,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
   }
 
-  // ── Logout (RF-003) ──
+  // ── Logout & Session Timeout (RF-003) ──
 
-  /// Menghapus sesi dan mengeluarkan pengguna.
+  /// Menghapus sesi dan mengeluarkan pengguna secara manual.
   Future<void> logout() async {
     await _secure.clearSession();
     state = const AuthState(status: AuthStatus.unauthenticated);
+  }
+
+  /// Logout otomatis akibat tidak ada aktivitas selama 1 menit (Session Timeout).
+  Future<void> logoutDueToInactivity() async {
+    await _secure.clearSession();
+    state = const AuthState(
+      status: AuthStatus.unauthenticated,
+      errorMessage: 'Sesi Anda telah berakhir karena tidak ada aktivitas selama 1 menit.',
+    );
+  }
+
+  /// Memperbarui timestamp aktivitas saat pengguna berinteraksi.
+  Future<void> recordUserActivity() async {
+    if (state.status == AuthStatus.authenticated) {
+      await _secure.updateLastActive();
+    }
   }
 }
 

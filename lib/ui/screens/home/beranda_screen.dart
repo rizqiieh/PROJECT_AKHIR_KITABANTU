@@ -102,7 +102,7 @@ class _BerandaScreenState extends ConsumerState<BerandaScreen> {
 
                 // ── Header Sapaan Pengguna ──
                 Text(
-                  'Assalamu\'alaikum, ${user?.fullName?.split(' ').first ?? 'Ahmad'}',
+                  'Assalamu\'alaikum, ${user?.fullName.split(' ').first ?? 'Ahmad'}',
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -480,7 +480,7 @@ class _BerandaScreenState extends ConsumerState<BerandaScreen> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: filteredList.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (ctx, idx) {
                         return CampaignCard(campaign: filteredList[idx]);
                       },
