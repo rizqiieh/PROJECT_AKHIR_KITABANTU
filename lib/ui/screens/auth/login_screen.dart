@@ -77,20 +77,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ],
                   ),
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F8F4),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.volunteer_activism_rounded,
-                        color: primaryGreen,
-                        size: 28,
-                      ),
+                 child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Image.asset(
+                      'assets/images/LogoKitaBantu.png',
+                      fit: BoxFit.contain,
                     ),
                   ),
+                ),
                 ),
                 const SizedBox(height: 14),
 

@@ -8,6 +8,7 @@ import 'package:kitabantu/ui/screens/minigame/minigame_screen.dart';
 import 'package:kitabantu/ui/screens/utilities/converter_screen.dart';
 import 'package:kitabantu/ui/screens/utilities/zakat_calculator_screen.dart';
 import 'package:kitabantu/ui/widgets/campaign_card.dart';
+import '../campaign/scan_receipt_screen.dart';
 
 /// Layar Beranda Utama — Tampilan Modern sesuai Desain Stitch AI.
 class BerandaScreen extends ConsumerStatefulWidget {
@@ -326,12 +327,14 @@ class _BerandaScreenState extends ConsumerState<BerandaScreen> {
                       ),
                     ),
                     _StitchMenuCard(
-                      icon: Icons.explore_outlined,
-                      label: 'Jelajah Ziswaf',
-                      onTap: () {
-                        ref.read(selectedCategoryProvider.notifier).state = 'Semua';
-                      },
-                    ),
+                      icon: Icons.document_scanner_outlined,
+                       label: 'AI Scan Nota',
+                       onTap: () {
+                      Navigator.of(context).push(
+                       MaterialPageRoute(builder: (_) => const ScanReceiptScreen()),
+                            );
+                          },
+                        ),
                   ],
                 ),
                 const SizedBox(height: 22),
