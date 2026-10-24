@@ -131,6 +131,9 @@ class _MapLbsScreenState extends State<MapLbsScreen> {
             options: MapOptions(
               initialCenter: _currentPosition,
               initialZoom: 12.0,
+              interactionOptions: const InteractionOptions(
+                flags: InteractiveFlag.all, // Mengizinkan pinch-zoom, geser, dan rotasi dua jari
+              ),
               onTap: (tapPosition, point) {
                 if (_selectedCampaign != null) {
                   setState(() => _selectedCampaign = null);
