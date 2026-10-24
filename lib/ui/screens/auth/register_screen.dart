@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kitabantu/core/constants/app_colors.dart';
 import 'package:kitabantu/providers/auth_provider.dart';
 import 'package:kitabantu/ui/screens/home/main_shell.dart';
+import 'login_screen.dart';
 
 /// Halaman Registrasi (Bab 6 §3 — RF-001).
 ///
@@ -209,9 +210,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       'Sudah punya akun? ',
                       style: TextStyle(color: AppColors.onSurfaceVariant),
                     ),
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: const Text(
+                     GestureDetector(
+                     onTap: () => Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                           ),
+                         child: const Text(
                         'Masuk',
                         style: TextStyle(
                           color: AppColors.primary,

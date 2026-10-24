@@ -4,6 +4,7 @@ import 'package:kitabantu/core/constants/app_colors.dart';
 import 'package:kitabantu/providers/auth_provider.dart';
 import 'package:kitabantu/ui/screens/auth/login_screen.dart';
 import 'package:kitabantu/ui/screens/home/main_shell.dart';
+import 'onboarding_screen.dart';
 
 /// Splash Screen — pengecekan sesi aktif & session timeout (Bab 6 §1).
 ///
@@ -32,11 +33,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
     if (!mounted) return;
 
-    final authState = ref.read(authProvider);
+   final authState = ref.read(authProvider);
     if (authState.status == AuthStatus.authenticated) {
       _navigateTo(const MainShell());
     } else {
-      _navigateTo(LoginScreen(sessionExpiredMessage: authState.errorMessage));
+      _navigateTo(const OnboardingScreen());
     }
   }
 
