@@ -7,198 +7,447 @@ import 'package:kitabantu/providers/campaign_provider.dart';
 import 'package:kitabantu/ui/screens/profile/bookmarks_screen.dart';
 import 'package:kitabantu/ui/screens/profile/zakat_history_screen.dart';
 
-/// Layar Profil (Tab 2 — RF-002 & RF-003).
+// Warna tambahan khusus halaman ini (nuansa mint sesuai desain Stitch)
+const _ink = Color(0xFF1B3A2A); // teks gelap kehijauan
+const _mint = Color(0xFFDDF3E5); // latar ikon / chip
+const _mintSoft = Color(0xFFF1FBF5); // latar kotak statistik
+const _mintBorder = Color(0xFFD5EBDD); // garis tepi kartu
+
+/// Layar Profil (Tab 2 — RF-002 & RF-003) dengan desain baru.
 class ProfilScreen extends ConsumerWidget {
   const ProfilScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authProvider);
-    final user = authState.user;
-    final bookmarksAsync = ref.watch(bookmarksProvider);
-    final bookmarkCount = bookmarksAsync.value?.length ?? 0;
+    final user = ref.watch(authProvider).user;
+    final bookmarkCount = ref.watch(bookmarksProvider).value?.length ?? 0;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profil Saya')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const SizedBox(height: 16),
-
-            // ── Avatar Bergambar (RF-003) ──
-            GestureDetector(
-              onTap: () => _showAvatarOptions(context, ref),
-              child: Stack(
-                alignment: Alignment.bottomRight,
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: AppColors.secondary,
-                    backgroundImage: user?.avatarPath != null
-                        ? FileImage(File(user!.avatarPath!))
-                        : null,
-                    child: user?.avatarPath == null
-                        ? const Icon(Icons.person,
-                            size: 50, color: AppColors.onPrimary)
-                        : null,
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.camera_alt,
-                        size: 16, color: AppColors.onPrimary),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // ── Nama & Username ──
-            Text(
-              user?.fullName ?? 'Nama Pengguna',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '@${user?.username ?? 'username'}',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.onSurfaceVariant,
-                  ),
-            ),
-            const SizedBox(height: 8),
-
-            // ── Badge info akun ──
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceVariant,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                'Terdaftar sejak ${_formatDate(user?.createdAt)}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                    ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // ── Menu Pengaturan & Data Lokal (SQLite) ──
-            Card(
-              margin: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  // Toggle Biometrik (RF-002)
-                  SwitchListTile(
-                    title: const Text('Login Biometrik'),
-                    subtitle: Text(
-                      user?.biometricEnabled == true
-                          ? 'Sidik jari / wajah aktif'
-                          : 'Gunakan sidik jari / wajah untuk masuk',
-                    ),
-                    secondary: Icon(
-                      Icons.fingerprint,
-                      color: user?.biometricEnabled == true
-                          ? AppColors.success
-                          : AppColors.primary,
-                    ),
-                    value: user?.biometricEnabled ?? false,
-                    activeTrackColor: AppColors.secondary,
-                    thumbColor: WidgetStateProperty.resolveWith((states) {
-                      if (states.contains(WidgetState.selected)) {
-                        return AppColors.primary;
-                      }
-                      return null;
-                    }),
-                    onChanged: (value) =>
-                        _toggleBiometric(context, ref, value),
-                  ),
-                  const Divider(height: 1),
-
-                  // Kampanye Tersimpan (SQLite RF-004)
-                  ListTile(
-                    leading: const Icon(Icons.bookmark,
-                        color: AppColors.primary),
-                    title: const Text('Kampanye Tersimpan (SQLite)'),
-                    subtitle: Text('$bookmarkCount kampanye favorit'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => const BookmarksScreen()),
-                      );
-                    },
-                  ),
-                  const Divider(height: 1),
-
-                  // Riwayat Hitung Zakat (SQLite RF-008)
-                  ListTile(
-                    leading: const Icon(Icons.history,
-                        color: AppColors.primary),
-                    title: const Text('Riwayat Hitung Zakat (SQLite)'),
-                    subtitle: const Text('Lihat kalkulasi zakat tersimpan'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => const ZakatHistoryScreen()),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // ── Informasi Enkripsi & Keamanan ──
-            Card(
-              margin: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    const Icon(Icons.shield_outlined,
-                        color: AppColors.success),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Keamanan Akun Terenkripsi',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
-                                ?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Password di-hash dengan SHA-256 + 32-char salt unik di SQLite lokal.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(color: AppColors.onSurfaceVariant),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFF4FDF7), Color(0xFFE2F5E9)],
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTopBar(),
+                const SizedBox(height: 16),
+                _buildTitleRow(),
+                const SizedBox(height: 16),
+                _buildProfileCard(
+                  context,
+                  ref,
+                  fullName: user?.fullName ?? 'Nama Pengguna',
+                  username: user?.username ?? 'username',
+                  createdAt: user?.createdAt,
+                  avatarPath: user?.avatarPath,
+                  biometricEnabled: user?.biometricEnabled ?? false,
                 ),
-              ),
+                const SizedBox(height: 16),
+                _buildMenuCard(context, bookmarkCount),
+                const SizedBox(height: 16),
+                _buildSecurityCard(),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
+  // ───────────────────────── Header (logo + lonceng) ─────────────────────────
+  Widget _buildTopBar() => Row(
+        children: [
+          const Icon(Icons.volunteer_activism,
+              color: AppColors.primary, size: 28),
+          const SizedBox(width: 8),
+          const Text(
+            'KitaBantu',
+            style: TextStyle(
+                fontSize: 20, fontWeight: FontWeight.w800, color: _ink),
+          ),
+          const Spacer(),
+          IconButton(
+            onPressed: () {}, // TODO: arahkan ke halaman notifikasi
+            icon: const Icon(Icons.notifications_none, color: _ink),
+          ),
+        ],
+      );
+
+  // ───────────────────────── Judul + chip Terverifikasi ──────────────────────
+  Widget _buildTitleRow() => Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'Profil Pengguna',
+            style: TextStyle(
+                fontSize: 22, fontWeight: FontWeight.w800, color: _ink),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: _mint,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: _mintBorder),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.verified_user, size: 14, color: AppColors.primary),
+                SizedBox(width: 4),
+                Text('Terverifikasi',
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: _ink)),
+              ],
+            ),
+          ),
+        ],
+      );
+
+  // ───────────────────────── Kartu profil utama ──────────────────────────────
+  Widget _buildProfileCard(
+    BuildContext context,
+    WidgetRef ref, {
+    required String fullName,
+    required String username,
+    required String? createdAt,
+    required String? avatarPath,
+    required bool biometricEnabled,
+  }) =>
+      _card(
+        child: Column(
+          children: [
+            // Avatar + identitas
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _buildAvatar(context, ref, avatarPath),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        fullName,
+                        style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: _ink),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '@$username • Sejak ${_formatDate(createdAt)}',
+                        style: const TextStyle(
+                            fontSize: 12, color: AppColors.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _mint,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Donatur Peduli Aktif',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: _ink)),
+                            SizedBox(width: 4),
+                            Icon(Icons.star,
+                                size: 12, color: Color(0xFFF2A900)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Divider(height: 1, color: _mintBorder),
+            ),
+
+            // Dua kotak statistik
+            // TODO: ganti nilai di bawah dengan data asli dari provider donasi
+            Row(
+              children: [
+                _statBox('Total Infaq & Donasi', 'Rp 0'),
+                const SizedBox(width: 12),
+                _statBox('Aksi Gotong Royong', '0 Program'),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Baris biometrik (RF-002)
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: _mint,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.fingerprint,
+                      color: AppColors.primary),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Aktifkan Login Biometrik',
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: _ink)),
+                      const SizedBox(height: 2),
+                      Text(
+                        biometricEnabled
+                            ? 'Sidik jari / wajah aktif'
+                            : 'Sidik jari / Face ID saat membuka aplikasi',
+                        style: const TextStyle(
+                            fontSize: 11.5,
+                            color: AppColors.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: biometricEnabled,
+                  activeTrackColor: AppColors.primary,
+                  thumbColor: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.selected)) {
+                      return Colors.white;
+                    }
+                    return null;
+                  }),
+                  onChanged: (value) => _toggleBiometric(context, ref, value),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+
+  Widget _buildAvatar(BuildContext context, WidgetRef ref, String? path) =>
+      GestureDetector(
+        onTap: () => _showAvatarOptions(context, ref),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: _mintBorder, width: 2),
+              ),
+              child: CircleAvatar(
+                radius: 34,
+                backgroundColor: AppColors.secondary,
+                backgroundImage: path != null ? FileImage(File(path)) : null,
+                child: path == null
+                    ? const Icon(Icons.person,
+                        size: 34, color: AppColors.onPrimary)
+                    : null,
+              ),
+            ),
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: const Icon(Icons.check, size: 12, color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _statBox(String label, String value) => Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+          decoration: BoxDecoration(
+            color: _mintSoft,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _mintBorder),
+          ),
+          child: Column(
+            children: [
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 11, color: AppColors.onSurfaceVariant),
+              ),
+              const SizedBox(height: 6),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+  // ───────────────── Menu data lokal (SQLite RF-004 & RF-008) ────────────────
+  Widget _buildMenuCard(BuildContext context, int bookmarkCount) => _card(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+        child: Column(
+          children: [
+            _menuTile(
+              icon: Icons.bookmark,
+              title: 'Kampanye Tersimpan (SQLite)',
+              subtitle: '$bookmarkCount kampanye favorit',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const BookmarksScreen()),
+              ),
+            ),
+            const Divider(height: 1, indent: 12, endIndent: 12, color: _mintBorder),
+            _menuTile(
+              icon: Icons.history,
+              title: 'Riwayat Hitung Zakat (SQLite)',
+              subtitle: 'Lihat kalkulasi zakat tersimpan',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ZakatHistoryScreen()),
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _menuTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) =>
+      InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _mint,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: AppColors.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: _ink)),
+                    const SizedBox(height: 2),
+                    Text(subtitle,
+                        style: const TextStyle(
+                            fontSize: 11.5,
+                            color: AppColors.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant),
+            ],
+          ),
+        ),
+      );
+
+  // ───────────────────────── Info keamanan ───────────────────────────────────
+  Widget _buildSecurityCard() => _card(
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: _mint,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.shield_outlined, color: AppColors.success),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Keamanan Akun Terenkripsi',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: _ink)),
+                  SizedBox(height: 2),
+                  Text(
+                    'Password di-hash dengan SHA-256 + 32-char salt unik di SQLite lokal.',
+                    style: TextStyle(
+                        fontSize: 11.5, color: AppColors.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+
+  // ───────────────────────── Kartu putih generik ─────────────────────────────
+  Widget _card({
+    required Widget child,
+    EdgeInsets padding = const EdgeInsets.all(16),
+  }) =>
+      Container(
+        width: double.infinity,
+        padding: padding,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: _mintBorder),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x143A6B4F),
+              blurRadius: 16,
+              offset: Offset(0, 6),
+            ),
+          ],
+        ),
+        child: child,
+      );
+
+  // ───────────────────────── Logika (tidak berubah) ──────────────────────────
   Future<void> _toggleBiometric(
       BuildContext context, WidgetRef ref, bool enable) async {
     final success =
