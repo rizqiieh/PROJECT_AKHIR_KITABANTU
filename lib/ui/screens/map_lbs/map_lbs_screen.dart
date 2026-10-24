@@ -32,6 +32,14 @@ class _MapLbsScreenState extends State<MapLbsScreen> {
     super.initState();
     _loadCampaignsAndLocation();
   }
+  void _resetNorthAndRecenter() {
+    // Mengembalikan peta ke posisi pengguna saat ini dan reset rotasi ke 0 (Utara)
+    _mapController.moveAndRotate(
+      _currentPosition,
+      _mapController.camera.zoom,
+      0.0, // Sudut rotasi 0 derajat (North up)
+    );
+  }
 
   Future<void> _loadCampaignsAndLocation() async {
     final list = await CampaignRepository.instance.getCampaigns();
@@ -129,6 +137,7 @@ class _MapLbsScreenState extends State<MapLbsScreen> {
                 }
               },
             ),
+            
             children: [
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -206,7 +215,20 @@ class _MapLbsScreenState extends State<MapLbsScreen> {
               ),
             ],
           ),
-
+Positioned(
+            bottom: 24,
+            right: 16,
+            child: FloatingActionButton(
+              mini: true,
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF2F6533),
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              tooltip: 'Arahkan ke Utara & Pusatkan Lokasi',
+              onPressed: _resetNorthAndRecenter,
+              child: const Icon(Icons.navigation, size: 22), // Ikon jarum kompas
+            ),
+          ),
           // ── Loading Indicator GPS ──
           if (_isLoadingLocation)
             Positioned(
