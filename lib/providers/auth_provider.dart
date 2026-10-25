@@ -228,8 +228,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return state.errorMessage;
     }
 
+    // ── Cek apakah user sudah mengaktifkan biometrik di profil ──
+    final isBiometricActive = await _secure.isBiometricEnabled();
+    if (!isBiometricActive) {
+      state = state.copyWith(
+        status: AuthStatus.unauthenticated,
+        errorMessage: 'Login biometrik belum diaktifkan. Silakan aktifkan di menu Profil terlebih dahulu atau masuk secara manual.',
+      );
+      return state.errorMessage;
+    }
+
     try {
-      // 1. Langsung panggil dialog pemindai sidik jari bawaan OS
+      // 1. Panggil dialog pemindai sidik jari bawaan OS
       final authenticated = await _localAuth.authenticate(
         localizedReason: 'Verifikasi sidik jari untuk masuk ke KitaBantu',
         options: const AuthenticationOptions(
@@ -246,7 +256,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return state.errorMessage;
       }
 
-      // 2. Ambil user dari database lokal (ID sesi terakhir atau default user pertama)
+      // 2. Lanjutkan ambil user dari database/sesi (kode bawaanmu di bawahnya)...
       final storedId = await _secure.getSessionUserId();
       final userId = storedId ?? 1;
       final user = await _db.getUserById(userId);
@@ -328,11 +338,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // ── Logout & Session Timeout (RF-003) ──
 
   /// Menghapus sesi dan mengeluarkan pengguna secara manual.
-  Future<void> logout() async {
-    await _secure.clearSession();
-    state = const AuthState(status: AuthStatus.unauthenticated);
+Future<void> logout() async {
+  // Simpan dulu apakah user mengaktifkan biometrik sebelum sesi dibersihkan
+  final wasBiometricEnabled = await _secure.isBiometricEnabled();
+  final lastUserId = state.user?.id;
+
+  // Bersihkan token / sesi login
+  await _secure.clearSession();
+
+  // Kembalikan status biometrik dan ID user terakhir agar layar login tahu
+  if (wasBiometricEnabled && lastUserId != null) {
+    await _secure.updateBiometricEnabled(true);
+    // Jika ada method menyimpan lastUserId, simpan di sini
   }
 
+  state = const AuthState();
+}
   /// Logout otomatis akibat tidak ada aktivitas selama 1 menit (Session Timeout).
   Future<void> logoutDueToInactivity() async {
     await _secure.clearSession();
