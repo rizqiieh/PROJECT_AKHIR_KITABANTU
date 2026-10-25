@@ -31,6 +31,33 @@ class CampaignCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Tampilkan gambar jika URL tersedia
+              if (campaign.imageUrl != null && campaign.imageUrl!.isNotEmpty)
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: Image.network(
+                      campaign.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        height: 160,
+                        color: Colors.grey[200],
+                        child: const Icon(Icons.broken_image, color: Colors.grey),
+                      ),
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          height: 160,
+                          color: Colors.grey[100],
+                          child: const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
             // ── Header kartu: Kategori & Lokasi ──
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
