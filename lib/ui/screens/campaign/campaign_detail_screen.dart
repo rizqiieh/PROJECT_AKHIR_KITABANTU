@@ -9,6 +9,7 @@ import 'package:kitabantu/data/repositories/campaign_repository.dart';
 import 'package:kitabantu/providers/auth_provider.dart';
 import 'package:kitabantu/providers/campaign_provider.dart';
 
+
 /// Halaman Detail Kampanye & Simulasi Donasi (Bab 6 §5).
 class CampaignDetailScreen extends ConsumerStatefulWidget {
   final CampaignModel campaign;
@@ -506,29 +507,51 @@ class _DonationBottomSheetState extends ConsumerState<_DonationBottomSheet> {
           const SizedBox(height: 20),
 
           // ── Tombol Bayar Simulasi ──
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _isProcessing || _selectedAmount <= 0
-                  ? null
-                  : _processDonation,
-              child: _isProcessing
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.onPrimary,
-                      ),
-                    )
-                  : Text('Donasi ${CurrencyUtils.formatIdr(_selectedAmount)}'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+        // -- Tombol Bayar Simulasi --
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _isProcessing || _selectedAmount <= 0
+                ? null
+                : () async {
+                    setState(() => _isProcessing = true);
+                    try {
+                      // 1. Update dana terkumpul ke Supabase
+                     final repo = CampaignRepository.instance;
+                      await repo.donateToCampaign(
+                        campaignId: widget.campaign.id,
+                        currentCollected: widget.campaign.collectedAmount,
+                        donationAmount: _selectedAmount.toDouble(),
+                      );
 
+                      // 2. Jalankan proses donasi bawaan (buku kas / ledger)
+                      await _processDonation();
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Gagal donasi: $e')),
+                        );
+                      }
+                    } finally {
+                      if (mounted) setState(() => _isProcessing = false);
+                    }
+                  },
+            child: _isProcessing
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text('Konfirmasi Pembayaran'),
+          ),
+        ),
+      ],
+    ),
+  );
+}
   Widget _buildCurrencyBadge(String code, double value) {
     return Column(
       children: [

@@ -20,6 +20,9 @@
     <!-- Untuk notifikasi terjadwal (exact alarms) di Android 12+ -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="KitaBantu"
         android:name="${applicationName}"

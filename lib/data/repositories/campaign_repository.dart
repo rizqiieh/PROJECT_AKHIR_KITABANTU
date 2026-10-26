@@ -3,6 +3,7 @@ import 'package:kitabantu/data/models/campaign_model.dart';
 import 'package:kitabantu/data/models/ledger_model.dart';
 import 'package:kitabantu/data/remote/supabase_service.dart';
 import 'package:kitabantu/core/utils/ledger_utils.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Repositori data kampanye donasi KitaBantu (RF-004, RF-005, RF-007).
 ///
@@ -256,5 +257,20 @@ class CampaignRepository {
     }
 
     return newBlock;
+  }
+ /// Simulasi update donasi ke Supabase
+  Future<void> donateToCampaign({
+    required String campaignId,
+    required double currentCollected,
+    required double donationAmount,
+  }) async {
+    final newTotal = currentCollected + donationAmount;
+
+    if (_supabase.isAvailable) {
+      await Supabase.instance.client
+          .from('campaigns')
+          .update({'collected_amount': newTotal})
+          .eq('id', campaignId);
+    }
   }
 }

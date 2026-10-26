@@ -6,6 +6,7 @@ import 'package:kitabantu/providers/auth_provider.dart';
 import 'package:kitabantu/providers/campaign_provider.dart';
 import 'package:kitabantu/ui/screens/profile/bookmarks_screen.dart';
 import 'package:kitabantu/ui/screens/profile/zakat_history_screen.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 // Warna tambahan khusus halaman ini (nuansa mint sesuai desain Stitch)
 const _ink = Color(0xFF1B3A2A); // teks gelap kehijauan
@@ -14,11 +15,78 @@ const _mintSoft = Color(0xFFF1FBF5); // latar kotak statistik
 const _mintBorder = Color(0xFFD5EBDD); // garis tepi kartu
 
 /// Layar Profil (Tab 2 — RF-002 & RF-003) dengan desain baru.
-class ProfilScreen extends ConsumerWidget {
+/// Layar Profil (Tab 2 - RF-002 & RF-003) dengan desain baru.
+class ProfilScreen extends ConsumerStatefulWidget {
   const ProfilScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfilScreen> createState() => _ProfilScreenState();
+}
+
+class _ProfilScreenState extends ConsumerState<ProfilScreen> {
+  final _storage = const FlutterSecureStorage();
+  bool _isBiometricEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBiometricSetting();
+  }
+
+  Future<void> _loadBiometricSetting() async {
+    final value = await _storage.read(key: 'biometric_enabled');
+    if (mounted) {
+      setState(() {
+        _isBiometricEnabled = value == 'true';
+      });
+    }
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    // 1. Panggil provider agar Supabase/Auth Service mengaktifkan sesi biometrik
+    final success = await ref.read(authProvider.notifier).toggleBiometric(value);
+
+    if (!mounted) return;
+
+    // Jika perangkat menolak / sidik jari belum terdaftar di HP
+    if (!success && value) {
+      setState(() {
+        _isBiometricEnabled = false;
+      });
+      await _storage.write(key: 'biometric_enabled', value: 'false');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Gagal mengaktifkan biometrik. Pastikan sensor tersedia dan sidik jari terdaftar di perangkat.',
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    // 2. Simpan status switch dan perbarui UI jika berhasil
+    setState(() {
+      _isBiometricEnabled = value;
+    });
+    await _storage.write(key: 'biometric_enabled', value: value.toString());
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          value
+              ? 'Login biometrik berhasil diaktifkan'
+              : 'Login biometrik dinonaktifkan',
+        ),
+        backgroundColor: const Color(0xFF2F6533),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Catatan: di ConsumerState parameter 'WidgetRef ref' tidak perlu ditulis lagi 
+    // karena 'ref' sudah otomatis tersedia bawaan dari ConsumerState.
     final user = ref.watch(authProvider).user;
     final bookmarkCount = ref.watch(bookmarksProvider).value?.length ?? 0;
 
@@ -218,27 +286,28 @@ class ProfilScreen extends ConsumerWidget {
                               color: _ink)),
                       const SizedBox(height: 2),
                       Text(
-                        biometricEnabled
-                            ? 'Sidik jari / wajah aktif'
-                            : 'Sidik jari / Face ID saat membuka aplikasi',
-                        style: const TextStyle(
-                            fontSize: 11.5,
-                            color: AppColors.onSurfaceVariant),
-                      ),
+                        _isBiometricEnabled
+                       ? 'Sidik jari aktif'
+                         : 'Sidik jari / Face ID saat membuka aplikasi',
+                         style: const TextStyle(
+                         fontSize: 11.5,
+                         color: AppColors.onSurfaceVariant,
+                         ),
+                        ),
                     ],
                   ),
                 ),
                 Switch(
-                  value: biometricEnabled,
-                  activeTrackColor: AppColors.primary,
+                  value: _isBiometricEnabled,
+                   activeTrackColor: const Color(0xFF2F6533),
                   thumbColor: WidgetStateProperty.resolveWith((states) {
                     if (states.contains(WidgetState.selected)) {
-                      return Colors.white;
-                    }
-                    return null;
-                  }),
-                  onChanged: (value) => _toggleBiometric(context, ref, value),
-                ),
+                 return Colors.white;
+                   }
+                   return null;
+                    }),
+                  onChanged: (val) => _toggleBiometric(val),
+                  ),
               ],
             ),
           ],
@@ -448,35 +517,6 @@ class ProfilScreen extends ConsumerWidget {
       );
 
   // ───────────────────────── Logika (tidak berubah) ──────────────────────────
-  Future<void> _toggleBiometric(
-      BuildContext context, WidgetRef ref, bool enable) async {
-    final success =
-        await ref.read(authProvider.notifier).toggleBiometric(enable);
-
-    if (!context.mounted) return;
-
-    if (!success && enable) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-              'Gagal mengaktifkan biometrik. Pastikan sensor biometrik tersedia dan sidik jari telah didaftarkan di perangkat.'),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(enable
-              ? 'Login biometrik aktif ✓'
-              : 'Login biometrik dinonaktifkan'),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
-
   void _showAvatarOptions(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
       context: context,
