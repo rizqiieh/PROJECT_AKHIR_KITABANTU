@@ -33,15 +33,16 @@ class DatabaseHelper {
     // 1. Tabel Pengguna Lokal (RF-001)
     await db.execute('''
       CREATE TABLE users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        full_name TEXT NOT NULL,
-        username TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        salt TEXT NOT NULL,
-        avatar_path TEXT,
-        biometric_enabled INTEGER DEFAULT 0,
-        created_at TEXT NOT NULL
-      )
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  full_name TEXT NOT NULL,
+  username TEXT NOT NULL UNIQUE,
+  email TEXT,
+  password_hash TEXT NOT NULL,
+  salt TEXT NOT NULL,
+  avatar_path TEXT,
+  biometric_enabled INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL
+)
     ''');
 
     // 2. Tabel Bookmark Kampanye (RF-004)
@@ -128,14 +129,14 @@ class DatabaseHelper {
         conflictAlgorithm: ConflictAlgorithm.abort);
   }
 
-  Future<UserModel?> getUserByUsername(String username) async {
+ Future<UserModel?> getUserByUsername(String identifier) async {
     final db = await database;
     final result = await db.query(
       'users',
-      where: 'username = ?',
-      whereArgs: [username],
-      limit: 1,
+      where: '(username = ? OR email = ?)',
+      whereArgs: [identifier, identifier],
     );
+
     if (result.isEmpty) return null;
     return UserModel.fromMap(result.first);
   }
