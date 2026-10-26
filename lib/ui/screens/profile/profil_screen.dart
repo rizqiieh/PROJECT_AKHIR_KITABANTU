@@ -290,7 +290,7 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
                       Text(
                         _isBiometricEnabled
                        ? 'Sidik jari aktif'
-                         : 'Sidik jari / Face ID saat membuka aplikasi',
+                         : 'Sidik jari saat membuka aplikasi',
                          style: const TextStyle(
                          fontSize: 11.5,
                          color: AppColors.onSurfaceVariant,
