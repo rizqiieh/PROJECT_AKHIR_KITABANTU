@@ -172,6 +172,19 @@ class DatabaseHelper {
     );
   }
 
+  Future<int> updatePassword(String username, String passwordHash, String salt) async {
+    final db = await database;
+    return db.update(
+      'users',
+      {
+        'password_hash': passwordHash,
+        'salt': salt,
+      },
+      where: 'username = ?',
+      whereArgs: [username],
+    );
+  }
+
   Future<bool> isUsernameTaken(String username) async {
     final user = await getUserByUsername(username);
     return user != null;

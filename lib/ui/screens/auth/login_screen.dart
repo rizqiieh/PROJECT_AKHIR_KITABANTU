@@ -259,7 +259,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ],
                             ),
                             TextButton(
-                              onPressed: () {},
+                              onPressed: _showForgotPasswordSheet,
                               style: TextButton.styleFrom(
                                 padding: EdgeInsets.zero,
                                 minimumSize: Size.zero,
@@ -455,6 +455,316 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
+    );
+  }
+
+  /// Menampilkan modal bottom sheet untuk mengatur ulang kata sandi (Lupa Kata Sandi).
+  void _showForgotPasswordSheet() {
+    final resetUsernameCtrl = TextEditingController(text: _usernameCtrl.text.trim());
+    final newPasswordCtrl = TextEditingController();
+    final confirmPasswordCtrl = TextEditingController();
+    final sheetFormKey = GlobalKey<FormState>();
+    bool obscureNew = true;
+    bool obscureConfirm = true;
+    bool isSubmitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: SingleChildScrollView(
+                child: Form(
+                  key: sheetFormKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Indikator drag
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE2E8F0),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Header
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEAF5EE),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.lock_reset_rounded,
+                              color: Color(0xFF26533C),
+                              size: 26,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Atur Ulang Kata Sandi',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1B3B2B),
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Masukkan username dan kata sandi baru Anda.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF718096),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Username
+                      const Text(
+                        'Username Terdaftar',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2D3748),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: resetUsernameCtrl,
+                        textInputAction: TextInputAction.next,
+                        style: const TextStyle(fontSize: 13.5),
+                        decoration: InputDecoration(
+                          hintText: 'contoh: ahmad@email.com',
+                          hintStyle: const TextStyle(color: Color(0xFFA0AEC0), fontSize: 13),
+                          prefixIcon: const Icon(Icons.person_outline_rounded, size: 20, color: Color(0xFF718096)),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF26533C), width: 1.5),
+                          ),
+                        ),
+                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Username tidak boleh kosong' : null,
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Kata Sandi Baru
+                      const Text(
+                        'Kata Sandi Baru',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2D3748),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: newPasswordCtrl,
+                        obscureText: obscureNew,
+                        textInputAction: TextInputAction.next,
+                        style: const TextStyle(fontSize: 13.5),
+                        decoration: InputDecoration(
+                          hintText: 'Minimal 6 karakter',
+                          hintStyle: const TextStyle(color: Color(0xFFA0AEC0), fontSize: 13),
+                          prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20, color: Color(0xFF718096)),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureNew ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              size: 20,
+                              color: const Color(0xFF718096),
+                            ),
+                            onPressed: () => setSheetState(() => obscureNew = !obscureNew),
+                          ),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF26533C), width: 1.5),
+                          ),
+                        ),
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return 'Kata sandi baru tidak boleh kosong';
+                          if (v.length < 6) return 'Minimal 6 karakter';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Konfirmasi Kata Sandi Baru
+                      const Text(
+                        'Konfirmasi Kata Sandi Baru',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2D3748),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: confirmPasswordCtrl,
+                        obscureText: obscureConfirm,
+                        textInputAction: TextInputAction.done,
+                        style: const TextStyle(fontSize: 13.5),
+                        decoration: InputDecoration(
+                          hintText: 'Ulangi kata sandi baru',
+                          hintStyle: const TextStyle(color: Color(0xFFA0AEC0), fontSize: 13),
+                          prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20, color: Color(0xFF718096)),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureConfirm ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              size: 20,
+                              color: const Color(0xFF718096),
+                            ),
+                            onPressed: () => setSheetState(() => obscureConfirm = !obscureConfirm),
+                          ),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF26533C), width: 1.5),
+                          ),
+                        ),
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return 'Konfirmasi kata sandi tidak boleh kosong';
+                          if (v != newPasswordCtrl.text) return 'Konfirmasi kata sandi tidak cocok';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 22),
+
+                      // Tombol Simpan
+                      SizedBox(
+                        width: double.infinity,
+                        height: 46,
+                        child: ElevatedButton(
+                          onPressed: isSubmitting
+                              ? null
+                              : () async {
+                                  if (!sheetFormKey.currentState!.validate()) return;
+                                  setSheetState(() => isSubmitting = true);
+
+                                  final username = resetUsernameCtrl.text.trim();
+                                  final newPass = newPasswordCtrl.text;
+
+                                  final error = await ref
+                                      .read(authProvider.notifier)
+                                      .resetPassword(
+                                        username: username,
+                                        newPassword: newPass,
+                                      );
+
+                                  setSheetState(() => isSubmitting = false);
+
+                                  if (context.mounted) {
+                                    if (error != null) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(error),
+                                          backgroundColor: AppColors.error,
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                    } else {
+                                      Navigator.of(sheetContext).pop();
+                                      _usernameCtrl.text = username;
+                                      _passwordCtrl.clear();
+                                      _showSnackBar(
+                                        'Kata sandi berhasil diperbarui! Silakan masuk dengan kata sandi baru.',
+                                      );
+                                    }
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF26533C),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: isSubmitting
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'Perbarui Kata Sandi',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
