@@ -203,6 +203,29 @@ class AuthNotifier extends StateNotifier<AuthState> {
     return null;
   }
 
+  // ── Reset Password (Lupa Kata Sandi) ──
+
+  /// Memperbarui kata sandi baru untuk pengguna terdaftar.
+  Future<String?> resetPassword({
+    required String username,
+    required String newPassword,
+  }) async {
+    final user = await _db.getUserByUsername(username);
+    if (user == null) {
+      return 'Username "$username" tidak ditemukan di sistem.';
+    }
+
+    final newSalt = HashUtils.generateSalt();
+    final newPasswordHash = HashUtils.hashPassword(newPassword, newSalt);
+
+    final updated = await _db.updatePassword(username, newPasswordHash, newSalt);
+    if (updated > 0) {
+      return null; // Sukses reset
+    } else {
+      return 'Gagal memperbarui kata sandi. Silakan coba lagi.';
+    }
+  }
+
   // ── Login dengan Biometrik (RF-002) ──
 
   /// Memeriksa apakah perangkat mendukung biometrik.

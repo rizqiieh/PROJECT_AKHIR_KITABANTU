@@ -54,6 +54,7 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
         _isBiometricEnabled = false;
       });
       await _storage.write(key: 'biometric_enabled', value: 'false');
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -70,6 +71,7 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
       _isBiometricEnabled = value;
     });
     await _storage.write(key: 'biometric_enabled', value: value.toString());
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
