@@ -4,7 +4,6 @@ import 'package:kitabantu/core/constants/app_colors.dart';
 import 'package:kitabantu/providers/auth_provider.dart';
 import 'package:kitabantu/ui/screens/auth/register_screen.dart';
 import 'package:kitabantu/ui/screens/home/main_shell.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Halaman Login & Biometrik dengan Desain Stitch AI (Sage Green).
 class LoginScreen extends ConsumerStatefulWidget {

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'register_screen.dart';
-import 'login_screen.dart';
-import 'package:kitabantu/core/constants/app_colors.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -15,7 +13,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentPage = 0;
 
   // Palet warna sesuai desain Figma
-// Mengikuti tone warna Beranda (Clean Background & Green Branding)
   static const Color _bgColor = Color(0xFFF8F9FA);          // Latar abu-abu terang / off-white bersih
   static const Color _primaryGreen = Color(0xFF2F6533);     // Hijau utama khas KitaBantu
   static const Color _textColor = Color(0xFF1E293B);        // Teks gelap agar mudah dibaca
@@ -68,24 +65,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         Image.asset(item['image']!, height: 260),
                         const SizedBox(height: 36),
                         Text(
-  item['title']!,
-  textAlign: TextAlign.center,
-  style: const TextStyle(
-    fontSize: 22,
-    fontWeight: FontWeight.bold,
-    color: _textColor,
-  ),
-),
-const SizedBox(height: 12),
-Text(
-  item['desc']!,
-  textAlign: TextAlign.center,
-  style: const TextStyle(
-    fontSize: 13,
-    height: 1.5,
-    color: _subtitleColor,
-  ),
-),
+                          item['title']!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: _textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          item['desc']!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            height: 1.5,
+                            color: _subtitleColor,
+                          ),
+                        ),
                       ],
                     ),
                   );
@@ -104,9 +101,9 @@ Text(
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-  color: isActive ? _primaryGreen : _primaryGreen.withOpacity(0.2),
-  shape: BoxShape.circle,
-),
+                    color: isActive ? _primaryGreen : _primaryGreen.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
                 );
               }),
             ),

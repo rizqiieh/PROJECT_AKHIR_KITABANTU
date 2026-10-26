@@ -7,7 +7,7 @@ import 'core/utils/time_zone_utils.dart';
 import 'core/widgets/session_timeout_listener.dart';
 import 'data/remote/supabase_service.dart';
 import 'ui/screens/auth/splash_screen.dart';
-import 'package:kitabantu/ui/screens/auth/login_screen.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -42,7 +42,7 @@ class KitaBantuApp extends StatelessWidget {
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const LoginScreen(),
+      home: const SplashScreen(),
       builder: (context, child) => SessionTimeoutListener(
         child: child ?? const SizedBox.shrink(),
       ),

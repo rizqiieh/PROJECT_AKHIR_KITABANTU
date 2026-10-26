@@ -528,7 +528,7 @@ class _DonationBottomSheetState extends ConsumerState<_DonationBottomSheet> {
                       await _processDonation();
                     } catch (e) {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(this.context).showSnackBar(
                           SnackBar(content: Text('Gagal donasi: $e')),
                         );
                       }

@@ -7,11 +7,6 @@ import 'package:kitabantu/ui/screens/home/main_shell.dart';
 import 'onboarding_screen.dart';
 
 /// Splash Screen — pengecekan sesi aktif & session timeout (Bab 6 §1).
-///
-/// Menampilkan logo KitaBantu, lalu memeriksa apakah ada sesi login
-/// yang tersimpan di Secure Storage dan belum kedaluwarsa (< 1 menit).
-/// Jika masih valid → langsung ke MainShell tanpa perlu login lagi.
-/// Jika sudah kedaluwarsa atau belum ada sesi → arahkan ke LoginScreen.
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -33,11 +28,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
     if (!mounted) return;
 
-   final authState = ref.read(authProvider);
+    final authState = ref.read(authProvider);
     if (authState.status == AuthStatus.authenticated) {
       _navigateTo(const MainShell());
     } else {
-      _navigateTo(const OnboardingScreen());
+      if (authState.errorMessage != null && authState.errorMessage!.isNotEmpty) {
+        _navigateTo(LoginScreen(sessionExpiredMessage: authState.errorMessage));
+      } else {
+        _navigateTo(const OnboardingScreen());
+      }
     }
   }
 
