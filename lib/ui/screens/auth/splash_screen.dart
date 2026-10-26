@@ -55,19 +55,21 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Logo
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: AppColors.onPrimary,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: const Icon(
-                Icons.volunteer_activism,
-                size: 56,
-                color: Color(0xFF1B3B2B),
-              ),
+   Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            color: AppColors.onPrimary,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Center(
+            child: Image.asset(
+              'assets/images/LogoKitaBantu.png',
+              width: 90,
+              height: 90,
             ),
+          ),
+        ),
             const SizedBox(height: 24),
             const Text(
               'KitaBantu',

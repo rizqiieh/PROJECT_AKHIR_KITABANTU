@@ -60,18 +60,11 @@ class _BerandaScreenState extends ConsumerState<BerandaScreen> {
                   children: [
                     Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF26533C).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.volunteer_activism,
-                            color: Color(0xFF26533C),
-                            size: 24,
-                          ),
-                        ),
+                        Image.asset(
+  'assets/images/LogoKitaBantu.png',
+  width: 28,
+  height: 28,
+),
                         const SizedBox(width: 8),
                         const Text(
                           'KitaBantu',

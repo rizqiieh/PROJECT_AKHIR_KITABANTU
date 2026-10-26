@@ -156,8 +156,11 @@ Future<void> _pickAndSaveImage(BuildContext context, WidgetRef ref) async {
   // ───────────────────────── Header (logo + lonceng) ─────────────────────────
   Widget _buildTopBar() => Row(
         children: [
-          const Icon(Icons.volunteer_activism,
-              color: AppColors.primary, size: 28),
+         Image.asset(
+  'assets/images/LogoKitaBantu.png',
+  width: 28,
+  height: 28,
+),
           const SizedBox(width: 8),
           const Text(
             'KitaBantu',
