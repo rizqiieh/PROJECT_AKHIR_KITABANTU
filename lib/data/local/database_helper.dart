@@ -28,7 +28,15 @@ class DatabaseHelper {
       onUpgrade: _onUpgrade,
     );
   }
-
+Future<int> updateUserAvatar(int userId, String avatarPath) async {
+  final db = await database;
+  return await db.update(
+    'users',
+    {'avatar_path': avatarPath},
+    where: 'id = ?',
+    whereArgs: [userId],
+  );
+}
   Future<void> _createDB(Database db, int version) async {
     // 1. Tabel Pengguna Lokal (RF-001)
     await db.execute('''

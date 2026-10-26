@@ -28,8 +28,9 @@ late final PageController _pageController;
   /// Tab 3 (Logout) tidak memiliki layar — hanya memicu dialog.
   final List<Widget> _screens = const [
     BerandaScreen(),
-    ProfilScreen(),
     SaranKesanScreen(),
+    ProfilScreen(),
+    
   ];
 @override
   void initState() {

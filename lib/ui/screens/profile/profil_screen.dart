@@ -7,6 +7,11 @@ import 'package:kitabantu/providers/campaign_provider.dart';
 import 'package:kitabantu/ui/screens/profile/bookmarks_screen.dart';
 import 'package:kitabantu/ui/screens/profile/zakat_history_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
+import '../../../data/models/user_model.dart';
 
 // Warna tambahan khusus halaman ini (nuansa mint sesuai desain Stitch)
 const _ink = Color(0xFF1B3A2A); // teks gelap kehijauan
@@ -32,7 +37,22 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
     super.initState();
     _loadBiometricSetting();
   }
+Future<void> _pickAndSaveImage(BuildContext context, WidgetRef ref) async {
+  final picker = ImagePicker();
+  final pickedFile = await picker.pickImage(
+    source: ImageSource.gallery,
+    imageQuality: 80,
+  );
 
+  if (pickedFile == null) return;
+
+  final appDir = await getApplicationDocumentsDirectory();
+  final fileName = 'avatar_${DateTime.now().millisecondsSinceEpoch}${p.extension(pickedFile.path)}';
+  final savedImage = await File(pickedFile.path).copy('${appDir.path}/$fileName');
+
+  // Update path ke SQLite & provider
+  await ref.read(authProvider.notifier).updateAvatar(savedImage.path);
+}
   Future<void> _loadBiometricSetting() async {
     final value = await _storage.read(key: 'biometric_enabled');
     if (mounted) {
@@ -316,44 +336,36 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
         ),
       );
 
-  Widget _buildAvatar(BuildContext context, WidgetRef ref, String? path) =>
-      GestureDetector(
-        onTap: () => _showAvatarOptions(context, ref),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
+ Widget _buildAvatar(BuildContext context, WidgetRef ref, String? avatarPath) =>
+    GestureDetector(
+      onTap: () => _pickAndSaveImage(context, ref),
+      child: Stack(
+        children: [
+          CircleAvatar(
+            radius: 36,
+            backgroundColor: const Color(0xFF8DA385),
+            backgroundImage: (avatarPath != null && File(avatarPath).existsSync())
+                ? FileImage(File(avatarPath))
+                : null,
+            child: (avatarPath == null || !File(avatarPath).existsSync())
+                ? const Icon(Icons.person, size: 40, color: Colors.white)
+                : null,
+          ),
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Color(0xFF264E36),
                 shape: BoxShape.circle,
-                border: Border.all(color: _mintBorder, width: 2),
               ),
-              child: CircleAvatar(
-                radius: 34,
-                backgroundColor: AppColors.secondary,
-                backgroundImage: path != null ? FileImage(File(path)) : null,
-                child: path == null
-                    ? const Icon(Icons.person,
-                        size: 34, color: AppColors.onPrimary)
-                    : null,
-              ),
+              child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
             ),
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-                child: const Icon(Icons.check, size: 12, color: Colors.white),
-              ),
-            ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
 
   Widget _statBox(String label, String value) => Expanded(
         child: Container(
