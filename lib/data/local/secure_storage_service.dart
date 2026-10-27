@@ -13,13 +13,20 @@ class SecureStorageService {
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
 
-  // ── Kunci penyimpanan ──
+  // ── Kunci penyimpanan sesi aktif ──
   static const _keyUserId = 'session_user_id';
   static const _keyUsername = 'session_username';
   static const _keyFullName = 'session_full_name';
   static const _keyBiometricEnabled = 'session_biometric_enabled';
   static const _keyAvatarPath = 'session_avatar_path';
   static const _keyLastActive = 'session_last_active';
+
+  // ── Kunci preferensi onboarding aplikasi ──
+  static const _keyOnboardingCompleted = 'app_onboarding_completed';
+
+  // ── Kunci kredensial biometrik persisten perangkat (tetap ada meski logout / timeout) ──
+  static const _keyBiometricUserId = 'device_biometric_user_id';
+  static const _keyBiometricUsername = 'device_biometric_username';
 
   /// Batas waktu kedaluwarsa sesi jika tidak ada aktivitas (1 menit = 60 detik).
   static const int sessionTimeoutSeconds = 60;
@@ -48,6 +55,12 @@ class SecureStorageService {
     if (avatarPath != null) {
       await _storage.write(key: _keyAvatarPath, value: avatarPath);
     }
+
+    // Jika biometrik aktif, simpan juga sebagai kredensial biometrik persisten
+    if (biometricEnabled) {
+      await _storage.write(key: _keyBiometricUserId, value: userId.toString());
+      await _storage.write(key: _keyBiometricUsername, value: username);
+    }
   }
 
   /// Mengecek apakah ada sesi aktif.
@@ -72,10 +85,23 @@ class SecureStorageService {
     return _storage.read(key: _keyFullName);
   }
 
-  /// Mengecek apakah biometrik diaktifkan pada sesi ini.
+  /// Mengecek apakah biometrik diaktifkan pada sesi atau perangkat ini.
   Future<bool> isBiometricEnabled() async {
     final value = await _storage.read(key: _keyBiometricEnabled);
-    return value == 'true';
+    if (value == 'true') return true;
+    final bioUserId = await getBiometricUserId();
+    return bioUserId != null;
+  }
+
+  /// Mengambil ID user yang terdaftar untuk biometrik perangkat ini.
+  Future<int?> getBiometricUserId() async {
+    final value = await _storage.read(key: _keyBiometricUserId);
+    return value != null ? int.tryParse(value) : null;
+  }
+
+  /// Mengambil username yang terdaftar untuk biometrik perangkat ini.
+  Future<String?> getBiometricUsername() async {
+    return _storage.read(key: _keyBiometricUsername);
   }
 
   /// Mengambil path avatar dari sesi aktif.
@@ -83,10 +109,21 @@ class SecureStorageService {
     return _storage.read(key: _keyAvatarPath);
   }
 
-  /// Memperbarui status biometrik di sesi.
-  Future<void> updateBiometricEnabled(bool enabled) async {
+  /// Memperbarui status biometrik di sesi dan kredensial persisten perangkat.
+  Future<void> updateBiometricEnabled(bool enabled, {int? userId, String? username}) async {
     await _storage.write(
         key: _keyBiometricEnabled, value: enabled.toString());
+    if (enabled) {
+      if (userId != null) {
+        await _storage.write(key: _keyBiometricUserId, value: userId.toString());
+      }
+      if (username != null) {
+        await _storage.write(key: _keyBiometricUsername, value: username);
+      }
+    } else {
+      await _storage.delete(key: _keyBiometricUserId);
+      await _storage.delete(key: _keyBiometricUsername);
+    }
   }
 
   /// Memperbarui avatar di sesi.
@@ -96,6 +133,20 @@ class SecureStorageService {
     } else {
       await _storage.delete(key: _keyAvatarPath);
     }
+  }
+
+  /// Mengecek apakah onboarding pengantar telah selesai dilihat.
+  Future<bool> hasCompletedOnboarding() async {
+    final value = await _storage.read(key: _keyOnboardingCompleted);
+    return value == 'true';
+  }
+
+  /// Menandai status onboarding selesai.
+  Future<void> setOnboardingCompleted([bool completed = true]) async {
+    await _storage.write(
+      key: _keyOnboardingCompleted,
+      value: completed.toString(),
+    );
   }
 
   // ══════════════════════════════════════════════════════
@@ -133,11 +184,22 @@ class SecureStorageService {
   }
 
   // ══════════════════════════════════════════════════════
-  //  Hapus Sesi (Logout)
+  //  Hapus Sesi (Logout / Session Timeout)
   // ══════════════════════════════════════════════════════
 
-  /// Menghapus seluruh data sesi saat logout.
+  /// Menghapus sesi aktif tanpa menghapus kredensial biometrik perangkat.
+  /// Kredensial biometrik (_keyBiometricEnabled & _keyBiometricUserId) tetap dipertahankan
+  /// agar pengguna dapat masuk kembali menggunakan sidik jari setelah sesi berakhir.
   Future<void> clearSession() async {
+    await _storage.delete(key: _keyUserId);
+    await _storage.delete(key: _keyUsername);
+    await _storage.delete(key: _keyFullName);
+    await _storage.delete(key: _keyAvatarPath);
+    await _storage.delete(key: _keyLastActive);
+  }
+
+  /// Menghapus seluruh data termasuk kredensial biometrik (reset total).
+  Future<void> clearAll() async {
     await _storage.deleteAll();
   }
 }

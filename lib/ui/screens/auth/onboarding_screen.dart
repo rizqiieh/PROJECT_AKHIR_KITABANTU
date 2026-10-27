@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'register_screen.dart';
+import 'package:kitabantu/data/local/secure_storage_service.dart';
+import 'login_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -36,10 +37,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     },
   ];
 
-  void _finishOnboarding() {
+  Future<void> _finishOnboarding() async {
+    await SecureStorageService.instance.setOnboardingCompleted(true);
+    if (!mounted) return;
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const RegisterScreen()),
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
     );
   }
 
@@ -155,7 +158,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           }
                         },
                         child: Text(
-                          _currentPage == _pages.length - 1 ? 'Daftar' : 'Next',
+                          _currentPage == _pages.length - 1 ? 'Mulai' : 'Next',
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),

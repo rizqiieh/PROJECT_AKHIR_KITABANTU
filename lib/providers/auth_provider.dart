@@ -4,6 +4,7 @@ import 'package:kitabantu/core/utils/hash_utils.dart';
 import 'package:kitabantu/data/local/database_helper.dart';
 import 'package:kitabantu/data/local/secure_storage_service.dart';
 import 'package:kitabantu/data/models/user_model.dart';
+import 'package:kitabantu/data/models/wallet_transaction_model.dart';
 import 'package:flutter/foundation.dart'; // Menyediakan konstanta kIsWeb
 
 // ══════════════════════════════════════════════════════
@@ -69,7 +70,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
         user: null,
-        errorMessage: 'Sesi telah berakhir karena tidak ada aktivitas selama 1 menit. Silakan login kembali.',
+        errorMessage:
+            'Sesi telah berakhir karena tidak ada aktivitas selama 1 menit. Silakan login kembali.',
       );
       return;
     }
@@ -120,6 +122,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       username: username,
       passwordHash: passwordHash,
       salt: salt,
+      biometricEnabled: true,
+      balance: 1000000.0,
       createdAt: DateTime.now().toIso8601String(),
     );
 
@@ -127,13 +131,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final id = await _db.insertUser(user);
       final savedUser = user.copyWith(id: id);
 
-      // Langsung login setelah register
+      // Langsung login setelah register (biometrik aktif otomatis)
       await _secure.saveSession(
         userId: id,
         username: username,
         fullName: fullName,
-        biometricEnabled: false,
+        biometricEnabled: true,
       );
+      await _secure.updateBiometricEnabled(
+        true,
+        userId: id,
+        username: username,
+      );
+      await _secure.setOnboardingCompleted(true);
 
       state = state.copyWith(
           status: AuthStatus.authenticated, user: savedUser);
@@ -189,15 +199,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return state.errorMessage;
     }
 
+    final canUseBio = await canUseBiometric();
+    if (canUseBio) {
+      await _db.updateBiometricEnabled(user.id!, true);
+      await _secure.updateBiometricEnabled(true, userId: user.id!, username: user.username);
+    }
+
     await _secure.saveSession(
       userId: user.id!,
       username: user.username,
       fullName: user.fullName,
-      biometricEnabled: user.biometricEnabled,
+      biometricEnabled: canUseBio ? true : user.biometricEnabled,
       avatarPath: user.avatarPath,
     );
 
-    state = state.copyWith(status: AuthStatus.authenticated, user: user);
+    final currentUser = canUseBio ? user.copyWith(biometricEnabled: true) : user;
+    state = state.copyWith(status: AuthStatus.authenticated, user: currentUser);
     return null;
   }
 
@@ -238,10 +255,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   /// Login menggunakan sidik jari / wajah.
+  /// Berfungsi baik saat aplikasi baru dibuka, setelah logout manual, maupun setelah session timeout.
   Future<String?> loginWithBiometric() async {
     state = state.copyWith(status: AuthStatus.loading);
 
-    // Cek ketersediaan sensor perangkat
+    // 1. Cek ketersediaan sensor perangkat
     final canUse = await canUseBiometric();
     if (!canUse) {
       state = state.copyWith(
@@ -251,20 +269,38 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return state.errorMessage;
     }
 
-    // ── Cek apakah user sudah mengaktifkan biometrik di profil ──
-    final isBiometricActive = await _secure.isBiometricEnabled();
-    if (!isBiometricActive) {
+    // 2. Cek apakah ada profil/user yang mengaktifkan biometrik
+    bool isBiometricActive = await _secure.isBiometricEnabled();
+    int? targetUserId =
+        await _secure.getBiometricUserId() ?? await _secure.getSessionUserId();
+
+    // Fallback: periksa pengguna terakhir yang mengaktifkan biometrik di SQLite lokal
+    if (!isBiometricActive || targetUserId == null) {
+      final bioUser = await _db.getLastUserWithBiometric();
+      if (bioUser != null && bioUser.id != null) {
+        isBiometricActive = true;
+        targetUserId = bioUser.id;
+        await _secure.updateBiometricEnabled(
+          true,
+          userId: bioUser.id,
+          username: bioUser.username,
+        );
+      }
+    }
+
+    if (!isBiometricActive || targetUserId == null) {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
-        errorMessage: 'Login biometrik belum diaktifkan. Silakan aktifkan di menu Profil terlebih dahulu atau masuk secara manual.',
+        errorMessage:
+            'Login biometrik belum diaktifkan. Silakan masuk dengan kata sandi terlebih dahulu dan aktifkan biometrik di menu Profil.',
       );
       return state.errorMessage;
     }
 
     try {
-      // 1. Panggil dialog pemindai sidik jari bawaan OS
+      // 3. Panggil dialog pemindai sidik jari bawaan OS
       final authenticated = await _localAuth.authenticate(
-        localizedReason: 'Verifikasi sidik jari untuk masuk ke KitaBantu',
+        localizedReason: 'Pindai sidik jari atau wajah untuk masuk ke KitaBantu',
         options: const AuthenticationOptions(
           stickyAuth: true,
           biometricOnly: true,
@@ -279,17 +315,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return state.errorMessage;
       }
 
-      // 2. Lanjutkan ambil user dari database/sesi (kode bawaanmu di bawahnya)...
-      final storedId = await _secure.getSessionUserId();
-      final userId = storedId ?? 1;
-      final user = await _db.getUserById(userId);
+      // 4. Lanjutkan ambil data user dari SQLite berdasarkan targetUserId
+      final user = await _db.getUserById(targetUserId);
 
       if (user == null) {
         state = state.copyWith(status: AuthStatus.unauthenticated);
-        return 'Akun belum terdaftar di database lokal.';
+        return 'Akun pengguna belum terdaftar di database lokal.';
       }
 
-      // 3. Simpan kembali sesi aktif setelah sidik jari lolos
+      // 5. Simpan kembali sesi aktif setelah sidik jari lolos
       await _secure.saveSession(
         userId: user.id!,
         username: user.username,
@@ -303,7 +337,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
-        errorMessage: 'Gagal biometrik: $e',
+        errorMessage: 'Gagal autentikasi biometrik: $e',
       );
       return state.errorMessage;
     }
@@ -336,7 +370,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
 
     await _db.updateBiometricEnabled(user.id!, enable);
-    await _secure.updateBiometricEnabled(enable);
+    await _secure.updateBiometricEnabled(
+      enable,
+      userId: user.id!,
+      username: user.username,
+    );
 
     state = state.copyWith(
       user: user.copyWith(biometricEnabled: enable),
@@ -354,35 +392,85 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _secure.updateAvatarPath(path);
 
     state = state.copyWith(
-      user: user.copyWith(avatarPath: path),
+      user: user.copyWith(
+        avatarPath: path,
+        clearAvatar: path == null,
+      ),
     );
+  }
+
+  // ── Saldo Kantong Amanah & Top Up (SQLite) ──
+
+  /// Melakukan Top Up saldo ke Kantong Amanah pengguna.
+  Future<bool> topUpBalance(double amount, {String method = 'QRIS'}) async {
+    final user = state.user;
+    if (user == null || user.id == null || amount <= 0) return false;
+
+    final newBalance = user.balance + amount;
+    await _db.updateUserBalance(user.id!, newBalance);
+    await _db.insertWalletTransaction(
+      WalletTransactionModel(
+        userId: user.id!,
+        type: 'TOPUP',
+        amount: amount,
+        description: 'Top Up Kantong Amanah via $method',
+        referenceId: 'TOP-${DateTime.now().millisecondsSinceEpoch}',
+        createdAt: DateTime.now().toIso8601String(),
+      ),
+    );
+
+    state = state.copyWith(
+      user: user.copyWith(balance: newBalance),
+    );
+    return true;
+  }
+
+  /// Memotong saldo pengguna saat berdonasi.
+  Future<bool> deductBalance(
+    double amount, {
+    required String description,
+    String? referenceId,
+  }) async {
+    final user = state.user;
+    if (user == null || user.id == null || amount <= 0) return false;
+    if (user.balance < amount) return false; // Saldo tidak mencukupi
+
+    final newBalance = user.balance - amount;
+    await _db.updateUserBalance(user.id!, newBalance);
+    await _db.insertWalletTransaction(
+      WalletTransactionModel(
+        userId: user.id!,
+        type: 'DONASI',
+        amount: amount,
+        description: description,
+        referenceId: referenceId,
+        createdAt: DateTime.now().toIso8601String(),
+      ),
+    );
+
+    state = state.copyWith(
+      user: user.copyWith(balance: newBalance),
+    );
+    return true;
   }
 
   // ── Logout & Session Timeout (RF-003) ──
 
-  /// Menghapus sesi dan mengeluarkan pengguna secara manual.
-Future<void> logout() async {
-  // Simpan dulu apakah user mengaktifkan biometrik sebelum sesi dibersihkan
-  final wasBiometricEnabled = await _secure.isBiometricEnabled();
-  final lastUserId = state.user?.id;
-
-  // Bersihkan token / sesi login
-  await _secure.clearSession();
-
-  // Kembalikan status biometrik dan ID user terakhir agar layar login tahu
-  if (wasBiometricEnabled && lastUserId != null) {
-    await _secure.updateBiometricEnabled(true);
-    // Jika ada method menyimpan lastUserId, simpan di sini
+  /// Menghapus sesi aktif secara manual saat pengguna menekan tombol Logout.
+  /// Kredensial biometrik tetap tersimpan agar pengguna bisa login kembali dengan sidik jari.
+  Future<void> logout() async {
+    await _secure.clearSession();
+    state = const AuthState();
   }
 
-  state = const AuthState();
-}
   /// Logout otomatis akibat tidak ada aktivitas selama 1 menit (Session Timeout).
+  /// Kredensial biometrik tetap tersimpan agar pengguna bisa login kembali dengan sidik jari.
   Future<void> logoutDueToInactivity() async {
     await _secure.clearSession();
     state = const AuthState(
       status: AuthStatus.unauthenticated,
-      errorMessage: 'Sesi Anda telah berakhir karena tidak ada aktivitas selama 1 menit.',
+      errorMessage:
+          'Sesi Anda telah berakhir karena tidak ada aktivitas selama 1 menit.',
     );
   }
 

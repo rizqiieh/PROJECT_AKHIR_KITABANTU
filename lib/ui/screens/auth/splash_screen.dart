@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kitabantu/core/constants/app_colors.dart';
+import 'package:kitabantu/data/local/database_helper.dart';
+import 'package:kitabantu/data/local/secure_storage_service.dart';
 import 'package:kitabantu/providers/auth_provider.dart';
 import 'package:kitabantu/ui/screens/auth/login_screen.dart';
 import 'package:kitabantu/ui/screens/home/main_shell.dart';
@@ -35,7 +37,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       if (authState.errorMessage != null && authState.errorMessage!.isNotEmpty) {
         _navigateTo(LoginScreen(sessionExpiredMessage: authState.errorMessage));
       } else {
-        _navigateTo(const OnboardingScreen());
+        // Cek apakah pengguna sudah pernah melihat pengantar atau sudah ada akun terdaftar
+        final hasCompletedOnboarding =
+            await SecureStorageService.instance.hasCompletedOnboarding();
+        final hasRegisteredUsers = await DatabaseHelper.instance.hasAnyUser();
+
+        if (hasCompletedOnboarding || hasRegisteredUsers) {
+          _navigateTo(const LoginScreen());
+        } else {
+          _navigateTo(const OnboardingScreen());
+        }
       }
     }
   }
@@ -59,13 +70,24 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                color: AppColors.onPrimary,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: const Icon(
-                Icons.volunteer_activism,
-                size: 56,
-                color: AppColors.primary,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Image.asset(
+                    'assets/images/LogoKitaBantu.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 24),

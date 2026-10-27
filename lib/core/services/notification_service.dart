@@ -108,4 +108,35 @@ class NotificationService {
       notificationDetails,
     );
   }
+
+  /// Notifikasi saat simulasi Top Up saldo berhasil.
+  Future<void> showTopUpSuccessNotification({
+    required String amountFormatted,
+    required String newBalanceFormatted,
+  }) async {
+    await initialize();
+
+    const androidDetails = AndroidNotificationDetails(
+      'wallet_channel',
+      'Kantong Amanah & Saldo',
+      channelDescription: 'Pemberitahuan perubahan saldo dan top-up kantong amanah',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: true,
+    );
+
+    const notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(),
+    );
+
+    final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    await _notificationsPlugin.show(
+      id,
+      'Top Up Saldo Berhasil! 🎉',
+      'Saldo $amountFormatted telah ditambahkan ke Kantong Amanah. Saldo saat ini: $newBalanceFormatted.',
+      notificationDetails,
+    );
+  }
 }

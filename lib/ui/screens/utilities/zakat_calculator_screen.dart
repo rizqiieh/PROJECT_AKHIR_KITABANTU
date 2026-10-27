@@ -35,7 +35,7 @@ class _ZakatCalculatorScreenState extends ConsumerState<ZakatCalculatorScreen>
     {
       'role': 'ai',
       'text':
-          'Assalamu\'alaikum! Saya Asisten AI Zakat KitaBantu. Tanyakan seputar nisab emas, tata cara zakat profesi/maal, atau 8 golongan penerima (asnaf).'
+          'Assalamu\'alaikum! Saya Pakar Fiqih Zakat dan Filantropi Islam KitaBantu. Silakan tanyakan studi kasus keuangan Anda—seperti analisis gaji/penghasilan, emas, tabungan, saham, kaitan pajak dan zakat, atau kriteria penerima (asnaf).'
     }
   ];
   bool _isAiThinking = false;
@@ -309,10 +309,11 @@ class _ZakatCalculatorScreenState extends ConsumerState<ZakatCalculatorScreen>
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _buildQuickChip('Berapa nisab emas?'),
-                _buildQuickChip('Siapa saja 8 asnaf?'),
-                _buildQuickChip('Cara zakat profesi'),
-                _buildQuickChip('Zakat tabungan & deposito'),
+                _buildQuickChip('Gaji 12 juta sebulan, berapa zakatnya?'),
+                _buildQuickChip('Punya emas 100 gram, wajib zakat?'),
+                _buildQuickChip('Sudah bayar pajak, masih wajib zakat?'),
+                _buildQuickChip('Bolehkah zakat untuk saudara kandung?'),
+                _buildQuickChip('Siapa saja 8 asnaf penerima?'),
               ],
             ),
           ),
@@ -407,7 +408,7 @@ class _ZakatCalculatorScreenState extends ConsumerState<ZakatCalculatorScreen>
                   child: TextField(
                     controller: _chatInputCtrl,
                     decoration: const InputDecoration(
-                      hintText: 'Tanyakan fiqih zakat ke AI...',
+                      hintText: 'Tanyakan studi kasus harta atau fiqih zakat...',
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.symmetric(horizontal: 14),
                     ),
@@ -440,13 +441,18 @@ class _ZakatCalculatorScreenState extends ConsumerState<ZakatCalculatorScreen>
     final q = question.trim();
     if (q.isEmpty) return;
 
+    final history = List<Map<String, String>>.from(_messages);
+
     setState(() {
       _messages.add({'role': 'user', 'text': q});
       _chatInputCtrl.clear();
       _isAiThinking = true;
     });
 
-    final answer = await GeminiAiService.instance.askZakatQuestion(q);
+    final answer = await GeminiAiService.instance.askZakatQuestion(
+      q,
+      history: history,
+    );
 
     if (mounted) {
       setState(() {

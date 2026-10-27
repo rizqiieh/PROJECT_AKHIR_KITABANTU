@@ -4,6 +4,7 @@ import '../models/user_model.dart';
 import '../models/campaign_model.dart';
 import '../models/ledger_model.dart';
 import '../models/zakat_history_model.dart';
+import '../models/wallet_transaction_model.dart';
 
 /// Helper database SQLite lokal KitaBantu (Bab 8.1).
 class DatabaseHelper {
@@ -23,7 +24,7 @@ class DatabaseHelper {
     final path = join(dbPath, 'kitabantu_local.db');
     return openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -39,7 +40,8 @@ class DatabaseHelper {
         password_hash TEXT NOT NULL,
         salt TEXT NOT NULL,
         avatar_path TEXT,
-        biometric_enabled INTEGER DEFAULT 0,
+        biometric_enabled INTEGER DEFAULT 1,
+        balance REAL DEFAULT 1000000.0,
         created_at TEXT NOT NULL
       )
     ''');
@@ -99,6 +101,19 @@ class DatabaseHelper {
         created_at TEXT NOT NULL
       )
     ''');
+
+    // 6. Tabel Riwayat Mutasi Dompet (Top-up & Pengeluaran)
+    await db.execute('''
+      CREATE TABLE wallet_transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        amount REAL NOT NULL,
+        description TEXT NOT NULL,
+        reference_id TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -112,6 +127,25 @@ class DatabaseHelper {
           amount REAL NOT NULL,
           previous_hash TEXT NOT NULL,
           entry_hash TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        )
+      ''');
+    }
+    if (oldVersion < 3) {
+      try {
+        await db.execute('ALTER TABLE users ADD COLUMN balance REAL DEFAULT 1000000.0');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE users ADD COLUMN biometric_enabled INTEGER DEFAULT 1');
+      } catch (_) {}
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS wallet_transactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          type TEXT NOT NULL,
+          amount REAL NOT NULL,
+          description TEXT NOT NULL,
+          reference_id TEXT,
           created_at TEXT NOT NULL
         )
       ''');
@@ -140,6 +174,13 @@ class DatabaseHelper {
     return UserModel.fromMap(result.first);
   }
 
+  Future<bool> hasAnyUser() async {
+    final db = await database;
+    final result = await db.rawQuery('SELECT COUNT(*) as count FROM users');
+    final count = Sqflite.firstIntValue(result) ?? 0;
+    return count > 0;
+  }
+
   Future<UserModel?> getUserById(int id) async {
     final db = await database;
     final result = await db.query(
@@ -152,11 +193,33 @@ class DatabaseHelper {
     return UserModel.fromMap(result.first);
   }
 
+  Future<UserModel?> getLastUserWithBiometric() async {
+    final db = await database;
+    final result = await db.query(
+      'users',
+      where: 'biometric_enabled = 1',
+      orderBy: 'id DESC',
+      limit: 1,
+    );
+    if (result.isEmpty) return null;
+    return UserModel.fromMap(result.first);
+  }
+
   Future<int> updateBiometricEnabled(int userId, bool enabled) async {
     final db = await database;
     return db.update(
       'users',
       {'biometric_enabled': enabled ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [userId],
+    );
+  }
+
+  Future<int> updateUserBalance(int userId, double newBalance) async {
+    final db = await database;
+    return db.update(
+      'users',
+      {'balance': newBalance},
       where: 'id = ?',
       whereArgs: [userId],
     );
@@ -188,6 +251,26 @@ class DatabaseHelper {
   Future<bool> isUsernameTaken(String username) async {
     final user = await getUserByUsername(username);
     return user != null;
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  CRUD — Tabel `wallet_transactions` (Mutasi Saldo)
+  // ══════════════════════════════════════════════════════
+
+  Future<int> insertWalletTransaction(WalletTransactionModel transaction) async {
+    final db = await database;
+    return db.insert('wallet_transactions', transaction.toMap());
+  }
+
+  Future<List<WalletTransactionModel>> getWalletTransactions(int userId) async {
+    final db = await database;
+    final list = await db.query(
+      'wallet_transactions',
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'id DESC',
+    );
+    return list.map((e) => WalletTransactionModel.fromMap(e)).toList();
   }
 
   // ══════════════════════════════════════════════════════
