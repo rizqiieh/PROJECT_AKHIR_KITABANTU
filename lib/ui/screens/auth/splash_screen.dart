@@ -6,6 +6,7 @@ import 'package:kitabantu/data/local/secure_storage_service.dart';
 import 'package:kitabantu/providers/auth_provider.dart';
 import 'package:kitabantu/ui/screens/auth/login_screen.dart';
 import 'package:kitabantu/ui/screens/home/main_shell.dart';
+
 import 'onboarding_screen.dart';
 
 /// Splash Screen — pengecekan sesi aktif & session timeout (Bab 6 §1).
@@ -34,12 +35,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (authState.status == AuthStatus.authenticated) {
       _navigateTo(const MainShell());
     } else {
-      if (authState.errorMessage != null && authState.errorMessage!.isNotEmpty) {
+      if (authState.errorMessage != null &&
+          authState.errorMessage!.isNotEmpty) {
         _navigateTo(LoginScreen(sessionExpiredMessage: authState.errorMessage));
       } else {
         // Cek apakah pengguna sudah pernah melihat pengantar atau sudah ada akun terdaftar
-        final hasCompletedOnboarding =
-            await SecureStorageService.instance.hasCompletedOnboarding();
+        final hasCompletedOnboarding = await SecureStorageService.instance
+            .hasCompletedOnboarding();
         final hasRegisteredUsers = await DatabaseHelper.instance.hasAnyUser();
 
         if (hasCompletedOnboarding || hasRegisteredUsers) {
@@ -52,9 +54,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   void _navigateTo(Widget screen) {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => screen),
-    );
+    Navigator.of(context)
+        .pushReplacement(MaterialPageRoute(builder: (_) => screen));
   }
 
   @override
