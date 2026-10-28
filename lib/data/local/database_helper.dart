@@ -21,7 +21,7 @@ class DatabaseHelper {
 
   Future<Database> _initDB() async {
     final dbPath = await getDatabasesPath();
-  final path = join(dbPath, 'kitabantu_local_v2.db');
+    final path = join(dbPath, 'kitabantu_local_v2.db');
     return openDatabase(
       path,
       version: 3,
@@ -29,30 +29,32 @@ class DatabaseHelper {
       onUpgrade: _onUpgrade,
     );
   }
-Future<int> updateUserAvatar(int userId, String avatarPath) async {
-  final db = await database;
-  return await db.update(
-    'users',
-    {'avatar_path': avatarPath},
-    where: 'id = ?',
-    whereArgs: [userId],
-  );
-}
+
+  Future<int> updateUserAvatar(int userId, String avatarPath) async {
+    final db = await database;
+    return await db.update(
+      'users',
+      {'avatar_path': avatarPath},
+      where: 'id = ?',
+      whereArgs: [userId],
+    );
+  }
+
   Future<void> _createDB(Database db, int version) async {
     // 1. Tabel Pengguna Lokal (RF-001)
     await db.execute('''
-    CREATE TABLE users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  full_name TEXT NOT NULL,
-  username TEXT NOT NULL UNIQUE,
-  email TEXT,
-  password_hash TEXT NOT NULL,
-  salt TEXT NOT NULL,
-  avatar_path TEXT,
-  biometric_enabled INTEGER DEFAULT 1,
-  balance REAL DEFAULT 0,
-  created_at TEXT NOT NULL
-);
+      CREATE TABLE users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        full_name TEXT NOT NULL,
+        username TEXT NOT NULL UNIQUE,
+        email TEXT,
+        password_hash TEXT NOT NULL,
+        salt TEXT NOT NULL,
+        avatar_path TEXT,
+        biometric_enabled INTEGER DEFAULT 1,
+        balance REAL DEFAULT 0,
+        created_at TEXT NOT NULL
+      );
     ''');
 
     // 2. Tabel Bookmark Kampanye (RF-004)
@@ -127,8 +129,10 @@ Future<int> updateUserAvatar(int userId, String avatarPath) async {
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
+      try {
+        await db.execute('ALTER TABLE users ADD COLUMN email TEXT;');
+      } catch (_) {}
       await db.execute('''
-await db.execute('ALTER TABLE users ADD COLUMN email TEXT;');
         CREATE TABLE IF NOT EXISTS ledger_entries (
           block_index INTEGER PRIMARY KEY,
           donation_id TEXT NOT NULL,
@@ -172,14 +176,31 @@ await db.execute('ALTER TABLE users ADD COLUMN email TEXT;');
         conflictAlgorithm: ConflictAlgorithm.abort);
   }
 
- Future<UserModel?> getUserByUsername(String identifier) async {
+  /// Cari pengguna berdasarkan username atau email
+  Future<UserModel?> getUserByIdentifier(String identifier) async {
+    final db = await database;
+    final clean = identifier.trim().toLowerCase();
+    final List<Map<String, dynamic>> maps = await db.query(
+      'users',
+      where: 'LOWER(username) = ? OR LOWER(email) = ?',
+      whereArgs: [clean, clean],
+      limit: 1,
+    );
+
+    if (maps.isNotEmpty) {
+      return UserModel.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<UserModel?> getUserByUsername(String username) async {
     final db = await database;
     final result = await db.query(
       'users',
       where: 'username = ?',
-      whereArgs: [identifier.trim()],
+      whereArgs: [username.trim()],
+      limit: 1,
     );
-
     if (result.isEmpty) return null;
     return UserModel.fromMap(result.first);
   }
@@ -258,10 +279,10 @@ await db.execute('ALTER TABLE users ADD COLUMN email TEXT;');
     );
   }
 
-    Future<bool> isUsernameTaken(String username) async {
-      final user = await getUserByUsername(username);
-      return user != null;
-    }
+  Future<bool> isUsernameTaken(String username) async {
+    final user = await getUserByUsername(username);
+    return user != null;
+  }
 
   // ══════════════════════════════════════════════════════
   //  CRUD — Tabel `wallet_transactions` (Mutasi Saldo)

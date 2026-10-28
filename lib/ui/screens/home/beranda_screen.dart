@@ -13,6 +13,7 @@ import 'package:kitabantu/ui/screens/utilities/converter_screen.dart';
 import 'package:kitabantu/ui/screens/utilities/zakat_calculator_screen.dart';
 import 'package:kitabantu/ui/widgets/campaign_card.dart';
 import '../campaign/scan_receipt_screen.dart';
+import 'package:kitabantu/ui/screens/home/zakat_detail_screen.dart';
 
 /// Layar Beranda Utama — Tampilan Modern sesuai Desain Stitch AI.
 class BerandaScreen extends ConsumerStatefulWidget {
@@ -289,12 +290,14 @@ class _BerandaScreenState extends ConsumerState<BerandaScreen> {
                             child: OutlinedButton.icon(
                               onPressed: () {
                                 Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (_) => const ZakatCalculatorScreen()),
-                                );
+  MaterialPageRoute(
+    builder: (_) => const ZakatDetailScreen(),
+  ),
+);
                               },
                               icon: const Icon(Icons.calculate_outlined, size: 15, color: Color(0xFF26533C)),
                               label: const Text(
-                                'Kalkulator Zakat',
+                                'Zakat',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,

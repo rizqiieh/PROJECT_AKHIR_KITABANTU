@@ -45,7 +45,7 @@ dependencies:
   google_generative_ai: ^0.4.7
 
   # --- Notifikasi Lokal (Bab 3) ---
-  flutter_local_notifications: ^18.0.1
+  flutter_local_notifications: ^20.1.0
   path_provider: ^2.1.6
 
 dev_dependencies:

@@ -116,19 +116,26 @@ final _emailCtrl = TextEditingController();
               ),
             ),
           ),
-          const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.volunteer_activism,
-                  color: AppColors.primary, size: 24),
-              SizedBox(width: 6),
-              Text('KitaBantu',
-                  style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      color: _ink)),
-            ],
-          ),
+          Row(
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    Image.asset(
+      'assets/images/LogoKitaBantu.png', // Sesuaikan dengan nama dan path file logo kamu
+      height: 24,
+      width: 24,
+      fit: BoxFit.contain,
+    ),
+    const SizedBox(width: 6),
+    Text(
+      'KitaBantu',
+      style: TextStyle(
+        fontSize: 17,
+        fontWeight: FontWeight.w800,
+        color: _ink,
+      ),
+    ),
+  ],
+),
         ],
       );
 
