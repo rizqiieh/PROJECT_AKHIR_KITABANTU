@@ -57,84 +57,68 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     );
   }
 
-  @override
+ @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFF1B3B2B),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Logo
-<<<<<<< HEAD
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Image.asset(
-                    'assets/images/LogoKitaBantu.png',
-                    fit: BoxFit.contain,
+      backgroundColor: const Color(0xFF1B3B2B),
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Image.asset(
+                      'assets/images/LogoKitaBantu.png',
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
               ),
-=======
-   Container(
-          width: 100,
-          height: 100,
-          decoration: BoxDecoration(
-            color: AppColors.onPrimary,
-            borderRadius: BorderRadius.circular(24),
+              const SizedBox(height: 24),
+              const Text(
+                'KitaBantu',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.onPrimary,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Crowdfunding Sosial & Zakat Digital',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.onPrimary.withValues(alpha: 0.8),
+                ),
+              ),
+              const SizedBox(height: 48),
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: AppColors.onPrimary,
+                ),
+              ),
+            ],
           ),
-          child: Center(
-            child: Image.asset(
-              'assets/images/LogoKitaBantu.png',
-              width: 90,
-              height: 90,
->>>>>>> 4d81ed6136d5f102840a5554939dd727900ebcdf
-            ),
-          ),
-        ),
-            const SizedBox(height: 24),
-            const Text(
-              'KitaBantu',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: AppColors.onPrimary,
-                letterSpacing: 1.2,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Crowdfunding Sosial & Zakat Digital',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.onPrimary.withValues(alpha: 0.8),
-              ),
-            ),
-            const SizedBox(height: 48),
-            const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                color: AppColors.onPrimary,
-              ),
-            ),
-          ],
         ),
       ),
     );
