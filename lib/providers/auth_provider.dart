@@ -100,6 +100,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<String?> register({
     required String fullName,
     required String username,
+    String? email,
     required String password,
   }) async {
     state = state.copyWith(status: AuthStatus.loading);
@@ -120,6 +121,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final user = UserModel(
       fullName: fullName,
       username: username,
+      email: email,
       passwordHash: passwordHash,
       salt: salt,
       biometricEnabled: true,

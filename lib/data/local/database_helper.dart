@@ -29,11 +29,20 @@ class DatabaseHelper {
       onUpgrade: _onUpgrade,
     );
   }
-
+Future<int> updateUserAvatar(int userId, String avatarPath) async {
+  final db = await database;
+  return await db.update(
+    'users',
+    {'avatar_path': avatarPath},
+    where: 'id = ?',
+    whereArgs: [userId],
+  );
+}
   Future<void> _createDB(Database db, int version) async {
     // 1. Tabel Pengguna Lokal (RF-001)
     await db.execute('''
       CREATE TABLE users (
+<<<<<<< HEAD
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         full_name TEXT NOT NULL,
         username TEXT UNIQUE NOT NULL,
@@ -44,6 +53,18 @@ class DatabaseHelper {
         balance REAL DEFAULT 1000000.0,
         created_at TEXT NOT NULL
       )
+=======
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  full_name TEXT NOT NULL,
+  username TEXT NOT NULL UNIQUE,
+  email TEXT,
+  password_hash TEXT NOT NULL,
+  salt TEXT NOT NULL,
+  avatar_path TEXT,
+  biometric_enabled INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL
+)
+>>>>>>> 4d81ed6136d5f102840a5554939dd727900ebcdf
     ''');
 
     // 2. Tabel Bookmark Kampanye (RF-004)
@@ -162,14 +183,14 @@ class DatabaseHelper {
         conflictAlgorithm: ConflictAlgorithm.abort);
   }
 
-  Future<UserModel?> getUserByUsername(String username) async {
+ Future<UserModel?> getUserByUsername(String identifier) async {
     final db = await database;
     final result = await db.query(
       'users',
-      where: 'username = ?',
-      whereArgs: [username],
-      limit: 1,
+      where: '(username = ? OR email = ?)',
+      whereArgs: [identifier, identifier],
     );
+
     if (result.isEmpty) return null;
     return UserModel.fromMap(result.first);
   }

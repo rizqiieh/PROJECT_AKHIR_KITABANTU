@@ -6,6 +6,7 @@ import 'package:kitabantu/data/local/database_helper.dart';
 import 'package:kitabantu/data/models/wallet_transaction_model.dart';
 import 'package:kitabantu/providers/auth_provider.dart';
 import 'package:kitabantu/providers/campaign_provider.dart';
+import 'package:kitabantu/ui/screens/home/zakat_detail_screen.dart';
 import 'package:kitabantu/ui/screens/ledger/ledger_screen.dart';
 import 'package:kitabantu/ui/screens/map_lbs/map_lbs_screen.dart';
 import 'package:kitabantu/ui/screens/minigame/minigame_screen.dart';
@@ -245,6 +246,7 @@ class _BerandaScreenState extends ConsumerState<BerandaScreen> {
 
 
                       children: [
+<<<<<<< HEAD
 
 
 
@@ -281,6 +283,13 @@ class _BerandaScreenState extends ConsumerState<BerandaScreen> {
 
 
                         ),
+=======
+                        Image.asset(
+  'assets/images/LogoKitaBantu.png',
+  width: 28,
+  height: 28,
+),
+>>>>>>> 4d81ed6136d5f102840a5554939dd727900ebcdf
                         const SizedBox(width: 8),
 
 
@@ -822,6 +831,7 @@ class _BerandaScreenState extends ConsumerState<BerandaScreen> {
 
 
                           ),
+<<<<<<< HEAD
 
 
 
@@ -877,6 +887,32 @@ class _BerandaScreenState extends ConsumerState<BerandaScreen> {
 
 
 
+=======
+                          const SizedBox(width: 10),
+                          Expanded(
+  child: OutlinedButton.icon(
+    onPressed: () { // <-- Ganti onTap jadi onPressed
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ZakatDetailScreen()),
+      );
+    },
+    icon: const Icon(Icons.calculate_outlined, size: 15, color: Color(0xFF26533C)),
+    label: const Text(
+      'Zakat',
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.bold,
+        color: Color(0xFF26533C),
+      ),
+    ),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: const Color(0xFFEBF6F0),
+                                side: BorderSide.none,
+                                padding: const EdgeInsets.symmetric(vertical: 11),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+>>>>>>> 4d81ed6136d5f102840a5554939dd727900ebcdf
                                 ),
 
 

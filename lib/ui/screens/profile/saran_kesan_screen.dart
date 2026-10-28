@@ -114,6 +114,7 @@ class _SaranKesanScreenState extends ConsumerState<SaranKesanScreen> {
   }
 
   // ───────────────────────── Header ──────────────────────────────────────────
+<<<<<<< HEAD
   Widget _buildTopBar() => Row( // Hapus const di sini
   children: [
     Image.asset(
@@ -132,6 +133,27 @@ class _SaranKesanScreenState extends ConsumerState<SaranKesanScreen> {
     ),
   ],
 );
+=======
+ Widget _buildTopBar() => Row(
+        children: [
+          Image.asset(
+            'assets/images/LogoKitaBantu.png',
+            width: 28,
+            height: 28,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'KitaBantu',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: _ink,
+            ),
+          ),
+        ],
+      );
+
+>>>>>>> 4d81ed6136d5f102840a5554939dd727900ebcdf
   // ───────────────────────── Kartu formulir ──────────────────────────────────
   Widget _buildFormCard() => _card(
         child: Form(
@@ -228,7 +250,7 @@ class _SaranKesanScreenState extends ConsumerState<SaranKesanScreen> {
                 child: ElevatedButton(
                   onPressed: _submitForm,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: const Color.fromARGB(255, 38, 78, 57),
                     foregroundColor: Colors.white,
                     minimumSize: const Size.fromHeight(52),
                     shape: RoundedRectangleBorder(

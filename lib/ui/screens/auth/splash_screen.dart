@@ -60,12 +60,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primary,
+      backgroundColor: Color(0xFF1B3B2B),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Logo
+<<<<<<< HEAD
             Container(
               width: 100,
               height: 100,
@@ -89,7 +90,23 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   ),
                 ),
               ),
+=======
+   Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            color: AppColors.onPrimary,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Center(
+            child: Image.asset(
+              'assets/images/LogoKitaBantu.png',
+              width: 90,
+              height: 90,
+>>>>>>> 4d81ed6136d5f102840a5554939dd727900ebcdf
             ),
+          ),
+        ),
             const SizedBox(height: 24),
             const Text(
               'KitaBantu',

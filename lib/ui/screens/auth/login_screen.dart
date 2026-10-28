@@ -234,7 +234,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 10),
 
+<<<<<<< HEAD
                        
+=======
+                        // Ingat Saya & Lupa Kata Sandi
+                        
+>>>>>>> 4d81ed6136d5f102840a5554939dd727900ebcdf
 
                         // Tombol Masuk
                         SizedBox(

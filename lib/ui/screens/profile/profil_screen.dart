@@ -19,8 +19,17 @@ import 'package:kitabantu/providers/campaign_provider.dart';
 import 'package:kitabantu/ui/screens/profile/bookmarks_screen.dart';
 
 import 'package:kitabantu/ui/screens/profile/zakat_history_screen.dart';
+<<<<<<< HEAD
 
 
+=======
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
+import '../../../data/models/user_model.dart';
+>>>>>>> 4d81ed6136d5f102840a5554939dd727900ebcdf
 
 // Warna tambahan khusus halaman ini (nuansa mint sesuai desain Stitch)
 
@@ -59,7 +68,33 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
     super.initState();
 
   }
+Future<void> _pickAndSaveImage(BuildContext context, WidgetRef ref) async {
+  final picker = ImagePicker();
+  final pickedFile = await picker.pickImage(
+    source: ImageSource.gallery,
+    imageQuality: 80,
+  );
 
+<<<<<<< HEAD
+=======
+  if (pickedFile == null) return;
+
+  final appDir = await getApplicationDocumentsDirectory();
+  final fileName = 'avatar_${DateTime.now().millisecondsSinceEpoch}${p.extension(pickedFile.path)}';
+  final savedImage = await File(pickedFile.path).copy('${appDir.path}/$fileName');
+
+  // Update path ke SQLite & provider
+  await ref.read(authProvider.notifier).updateAvatar(savedImage.path);
+}
+  Future<void> _loadBiometricSetting() async {
+    final value = await _storage.read(key: 'biometric_enabled');
+    if (mounted) {
+      setState(() {
+        _isBiometricEnabled = value == 'true';
+      });
+    }
+  }
+>>>>>>> 4d81ed6136d5f102840a5554939dd727900ebcdf
 
 
   @override
@@ -159,6 +194,7 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
   Widget _buildTopBar() => Row(
 
         children: [
+<<<<<<< HEAD
 
          Image.asset(
   'assets/images/LogoKitaBantu.png',
@@ -166,6 +202,13 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
   height: 32,
 ),
 
+=======
+         Image.asset(
+  'assets/images/LogoKitaBantu.png',
+  width: 28,
+  height: 28,
+),
+>>>>>>> 4d81ed6136d5f102840a5554939dd727900ebcdf
           const SizedBox(width: 8),
 
           const Text(
@@ -463,6 +506,7 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
                               color: _ink)),
 
                       const SizedBox(height: 2),
+<<<<<<< HEAD
 
                       const Text(
 
@@ -474,6 +518,16 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
 
                           color: AppColors.onSurfaceVariant,
 
+=======
+                      Text(
+                        _isBiometricEnabled
+                       ? 'Sidik jari aktif'
+                         : 'Sidik jari saat membuka aplikasi',
+                         style: const TextStyle(
+                         fontSize: 11.5,
+                         color: AppColors.onSurfaceVariant,
+                         ),
+>>>>>>> 4d81ed6136d5f102840a5554939dd727900ebcdf
                         ),
 
                       ),
@@ -538,6 +592,7 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
 
       );
 
+<<<<<<< HEAD
 
 
   bool _hasCustomAvatar(String? path) {
@@ -653,6 +708,38 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
   }
 
 
+=======
+ Widget _buildAvatar(BuildContext context, WidgetRef ref, String? avatarPath) =>
+    GestureDetector(
+      onTap: () => _pickAndSaveImage(context, ref),
+      child: Stack(
+        children: [
+          CircleAvatar(
+            radius: 36,
+            backgroundColor: const Color(0xFF8DA385),
+            backgroundImage: (avatarPath != null && File(avatarPath).existsSync())
+                ? FileImage(File(avatarPath))
+                : null,
+            child: (avatarPath == null || !File(avatarPath).existsSync())
+                ? const Icon(Icons.person, size: 40, color: Colors.white)
+                : null,
+          ),
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Color(0xFF264E36),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+>>>>>>> 4d81ed6136d5f102840a5554939dd727900ebcdf
 
   Widget _statBox(String label, String value) => Expanded(
 

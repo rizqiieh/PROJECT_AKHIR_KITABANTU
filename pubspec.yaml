@@ -9,8 +9,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+<<<<<<< HEAD
   image_picker: ^1.1.2
   path_provider: ^2.1.5
+=======
+  image_picker: ^1.2.4
+>>>>>>> 4d81ed6136d5f102840a5554939dd727900ebcdf
   google_mlkit_text_recognition: ^0.13.0
   # --- State Management (Bab 3) ---
   flutter_riverpod: ^2.6.1
@@ -47,6 +51,7 @@ dependencies:
 
   # --- Notifikasi Lokal (Bab 3) ---
   flutter_local_notifications: ^18.0.1
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:

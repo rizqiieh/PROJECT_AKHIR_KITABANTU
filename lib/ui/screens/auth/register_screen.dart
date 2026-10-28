@@ -25,7 +25,7 @@ class RegisterScreen extends ConsumerStatefulWidget {
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   // Ubah angka ini kalau ingin minimal password 8 karakter seperti di desain.
   static const int _minPassword = 6;
-
+final _emailCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final _fullNameCtrl = TextEditingController();
   final _usernameCtrl = TextEditingController();
@@ -42,6 +42,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _usernameCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmCtrl.dispose();
+    _emailCtrl.dispose();
     super.dispose();
   }
 
@@ -198,7 +199,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 controller: _usernameCtrl,
                 textInputAction: TextInputAction.next,
                 decoration: _decoration(
-                    hint: 'Pilih username unik', icon: Icons.alternate_email),
+                    hint: 'pilih username unik', icon: Icons.alternate_email),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) {
                     return 'Username tidak boleh kosong';
@@ -212,9 +213,50 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+const Text(
+  'Email',
+  style: TextStyle(fontWeight: FontWeight.bold),
+),
+TextFormField(
+  controller: _emailCtrl,
+  keyboardType: TextInputType.emailAddress,
+  decoration: InputDecoration(
+    hintText: 'contoh: nama@email.com',
+   hintStyle: const TextStyle(
+  fontSize: 13, // Ubah angka ini sesuai ukuran yang pas (default biasanya 14-16)
+  color: Colors.grey,
+),
+    prefixIcon: const Icon(Icons.mail_outline_rounded, color: Colors.grey),
+    filled: true,
+    fillColor: Colors.white,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: Colors.grey.shade300),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFF264E36), width: 1.5),
+    ),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: Colors.grey.shade300),
+    ),
+  ),
+  validator: (val) {
+    if (val != null && val.trim().isNotEmpty) {
+      final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+      if (!emailRegex.hasMatch(val.trim())) {
+        return 'Format email tidak valid';
+      }
+    }
+    return null;
+  },
+),
 
               // Password + indikator kekuatan
+              const SizedBox(height: 12),
               _label('Password'),
               TextFormField(
                 controller: _passwordCtrl,
@@ -291,7 +333,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _handleRegister,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: Color(0xFF1B3B2B),
                     foregroundColor: Colors.white,
                     minimumSize: const Size.fromHeight(52),
                     shape: RoundedRectangleBorder(
@@ -533,6 +575,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final error = await ref.read(authProvider.notifier).register(
           fullName: _fullNameCtrl.text.trim(),
           username: _usernameCtrl.text.trim(),
+          email: _emailCtrl.text.trim(),
           password: _passwordCtrl.text,
         );
 

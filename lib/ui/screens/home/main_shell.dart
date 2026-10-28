@@ -23,18 +23,30 @@ class MainShell extends ConsumerStatefulWidget {
 
 class _MainShellState extends ConsumerState<MainShell> {
   int _currentIndex = 0;
-
+late final PageController _pageController;
   /// Daftar layar untuk tab 0, 1, dan 2.
   /// Tab 3 (Logout) tidak memiliki layar — hanya memicu dialog.
   final List<Widget> _screens = const [
     BerandaScreen(),
-    ProfilScreen(),
     SaranKesanScreen(),
+    ProfilScreen(),
+    
   ];
+@override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _currentIndex);
+  }
 
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+<<<<<<< HEAD
      body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         transitionBuilder: (Widget child, Animation<double> animation) {
@@ -56,10 +68,19 @@ class _MainShellState extends ConsumerState<MainShell> {
           key: ValueKey<int>(_currentIndex),
           child: _screens[_currentIndex],
         ),
+=======
+      body: PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(), // Menonaktifkan swipe agar tidak sengaja tergeser
+        children: _screens,
+>>>>>>> 4d81ed6136d5f102840a5554939dd727900ebcdf
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: _onTabTapped,
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: const Color(0xFF264E36),
+        unselectedItemColor: Colors.grey.shade500,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
@@ -67,32 +88,41 @@ class _MainShellState extends ConsumerState<MainShell> {
             label: 'Beranda',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profil',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.rate_review_outlined),
             activeIcon: Icon(Icons.rate_review),
             label: 'Saran',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.logout_outlined),
-            activeIcon: Icon(Icons.logout),
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profil',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.logout, color: Colors.redAccent),
             label: 'Logout',
           ),
         ],
       ),
     );
   }
-
   void _onTabTapped(int index) {
-    if (index == 3) {
-      _showLogoutDialog();
-      return;
-    }
-    setState(() => _currentIndex = index);
+  // Jika menekan tab Logout (index 3), tampilkan dialog dan jangan ganti halaman
+  if (index == 3) {
+    _showLogoutDialog(); // atau method logout bawaanmu
+    return;
   }
+
+  setState(() {
+    _currentIndex = index;
+  });
+
+  // BARIS INI YANG WAJIB ADA AGAR HALAMAN BENAR-BENAR BERPINDAH:
+  _pageController.animateToPage(
+    index,
+    duration: const Duration(milliseconds: 300),
+    curve: Curves.easeInOutCubic,
+  );
+}
 
   /// Dialog konfirmasi logout (Bab 4.3).
   /// Menghapus sesi dan navigasi ke LoginScreen.
