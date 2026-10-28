@@ -15,7 +15,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   // Palet warna sesuai desain Figma
   static const Color _bgColor = Color(0xFFF8F9FA);          // Latar abu-abu terang / off-white bersih
-  static const Color _primaryGreen = Color(0xFF2F6533);     // Hijau utama khas KitaBantu
+  static const Color _primaryGreen = Color(0xFF26533C);    // Hijau utama khas KitaBantu
   static const Color _textColor = Color(0xFF1E293B);        // Teks gelap agar mudah dibaca
   static const Color _subtitleColor = Color(0xFF64748B);     // Abu-abu netral untuk deskripsi
 

@@ -234,49 +234,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 10),
 
-                        // Ingat Saya & Lupa Kata Sandi
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: Checkbox(
-                                    value: _rememberMe,
-                                    activeColor: primaryGreen,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                                    side: const BorderSide(color: Color(0xFFCBD5E0), width: 1.2),
-                                    onChanged: (val) => setState(() => _rememberMe = val ?? false),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  'Ingat Saya',
-                                  style: TextStyle(fontSize: 12, color: Color(0xFF4A5568)),
-                                ),
-                              ],
-                            ),
-                            TextButton(
-                              onPressed: _showForgotPasswordSheet,
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              child: const Text(
-                                'Lupa Kata Sandi?',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: primaryGreen,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 18),
+                       
 
                         // Tombol Masuk
                         SizedBox(

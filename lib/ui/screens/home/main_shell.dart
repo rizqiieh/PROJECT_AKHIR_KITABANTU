@@ -35,9 +35,27 @@ class _MainShellState extends ConsumerState<MainShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+     body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        transitionBuilder: (Widget child, Animation<double> animation) {
+          // Membuat efek animasi geser secara horizontal (dari kanan ke kiri)
+          final offsetAnimation = Tween<Offset>(
+            begin: const Offset(1.0, 0.0), // Mulai dari sisi kanan layar
+            end: Offset.zero,              // Berakhir tepat di tengah
+          ).animate(CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeInOut,       // Membuat pergerakannya lebih natural
+          ));
+
+          return SlideTransition(
+            position: offsetAnimation,
+            child: child,
+          );
+        },
+        child: KeyedSubtree(
+          key: ValueKey<int>(_currentIndex),
+          child: _screens[_currentIndex],
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
