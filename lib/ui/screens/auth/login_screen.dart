@@ -234,12 +234,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 10),
 
-<<<<<<< HEAD
                        
-=======
-                        // Ingat Saya & Lupa Kata Sandi
-                        
->>>>>>> 4d81ed6136d5f102840a5554939dd727900ebcdf
 
                         // Tombol Masuk
                         SizedBox(
@@ -368,8 +363,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   /// Login dengan username + password.
-  Future<void> _handleLogin() async {
+Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Tutup keyboard terlebih dahulu agar transisi layar mulus
+    FocusScope.of(context).unfocus();
 
     setState(() => _isLoading = true);
 
@@ -378,9 +376,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           password: _passwordCtrl.text,
         );
 
-    setState(() => _isLoading = false);
-
     if (!mounted) return;
+
+    setState(() => _isLoading = false);
 
     if (error != null) {
       _showSnackBar(error, isError: true);
@@ -390,7 +388,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
     }
   }
-
   /// Login dengan biometrik.
  /// Login dengan biometrik.
   Future<void> _handleBiometricLogin() async {

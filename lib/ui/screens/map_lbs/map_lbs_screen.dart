@@ -590,7 +590,7 @@ class _MapLbsScreenState extends State<MapLbsScreen> {
               value: progress,
               minHeight: 8,
               backgroundColor: _mint,
-              color: AppColors.primary,
+              color: const Color.fromARGB(255, 78, 129, 103),
             ),
           ),
           const SizedBox(height: 6),

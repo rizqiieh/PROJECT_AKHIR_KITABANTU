@@ -46,7 +46,6 @@ late final PageController _pageController;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-<<<<<<< HEAD
      body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         transitionBuilder: (Widget child, Animation<double> animation) {
@@ -68,12 +67,6 @@ late final PageController _pageController;
           key: ValueKey<int>(_currentIndex),
           child: _screens[_currentIndex],
         ),
-=======
-      body: PageView(
-        controller: _pageController,
-        physics: const NeverScrollableScrollPhysics(), // Menonaktifkan swipe agar tidak sengaja tergeser
-        children: _screens,
->>>>>>> 4d81ed6136d5f102840a5554939dd727900ebcdf
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,

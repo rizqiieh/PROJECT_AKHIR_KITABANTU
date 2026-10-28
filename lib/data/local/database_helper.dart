@@ -21,7 +21,7 @@ class DatabaseHelper {
 
   Future<Database> _initDB() async {
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'kitabantu_local.db');
+  final path = join(dbPath, 'kitabantu_local_v2.db');
     return openDatabase(
       path,
       version: 3,
@@ -41,19 +41,7 @@ Future<int> updateUserAvatar(int userId, String avatarPath) async {
   Future<void> _createDB(Database db, int version) async {
     // 1. Tabel Pengguna Lokal (RF-001)
     await db.execute('''
-      CREATE TABLE users (
-<<<<<<< HEAD
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        full_name TEXT NOT NULL,
-        username TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        salt TEXT NOT NULL,
-        avatar_path TEXT,
-        biometric_enabled INTEGER DEFAULT 1,
-        balance REAL DEFAULT 1000000.0,
-        created_at TEXT NOT NULL
-      )
-=======
+    CREATE TABLE users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   full_name TEXT NOT NULL,
   username TEXT NOT NULL UNIQUE,
@@ -61,10 +49,10 @@ Future<int> updateUserAvatar(int userId, String avatarPath) async {
   password_hash TEXT NOT NULL,
   salt TEXT NOT NULL,
   avatar_path TEXT,
-  biometric_enabled INTEGER DEFAULT 0,
+  biometric_enabled INTEGER DEFAULT 1,
+  balance REAL DEFAULT 0,
   created_at TEXT NOT NULL
-)
->>>>>>> 4d81ed6136d5f102840a5554939dd727900ebcdf
+);
     ''');
 
     // 2. Tabel Bookmark Kampanye (RF-004)
@@ -140,6 +128,7 @@ Future<int> updateUserAvatar(int userId, String avatarPath) async {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute('''
+await db.execute('ALTER TABLE users ADD COLUMN email TEXT;');
         CREATE TABLE IF NOT EXISTS ledger_entries (
           block_index INTEGER PRIMARY KEY,
           donation_id TEXT NOT NULL,
@@ -187,8 +176,8 @@ Future<int> updateUserAvatar(int userId, String avatarPath) async {
     final db = await database;
     final result = await db.query(
       'users',
-      where: '(username = ? OR email = ?)',
-      whereArgs: [identifier, identifier],
+      where: 'username = ?',
+      whereArgs: [identifier.trim()],
     );
 
     if (result.isEmpty) return null;
@@ -269,10 +258,10 @@ Future<int> updateUserAvatar(int userId, String avatarPath) async {
     );
   }
 
-  Future<bool> isUsernameTaken(String username) async {
-    final user = await getUserByUsername(username);
-    return user != null;
-  }
+    Future<bool> isUsernameTaken(String username) async {
+      final user = await getUserByUsername(username);
+      return user != null;
+    }
 
   // ══════════════════════════════════════════════════════
   //  CRUD — Tabel `wallet_transactions` (Mutasi Saldo)
