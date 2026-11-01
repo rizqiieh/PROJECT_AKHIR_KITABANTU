@@ -440,17 +440,27 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // ── Logout & Session Timeout (RF-003) ──
 
   Future<void> logout() async {
-    await _secure.clearSession();
-    state = const AuthState();
+    try {
+      await _secure.clearSession();
+    } catch (e) {
+      debugPrint('Gagal menghapus sesi: $e');
+    } finally {
+      state = const AuthState();
+    }
   }
 
   Future<void> logoutDueToInactivity() async {
-    await _secure.clearSession();
-    state = const AuthState(
-      status: AuthStatus.unauthenticated,
-      errorMessage:
-          'Sesi Anda telah berakhir karena tidak ada aktivitas selama 1 menit.',
-    );
+    try {
+      await _secure.clearSession();
+    } catch (e) {
+      debugPrint('Gagal menghapus sesi: $e');
+    } finally {
+      state = const AuthState(
+        status: AuthStatus.unauthenticated,
+        errorMessage:
+            'Sesi Anda telah berakhir karena tidak ada aktivitas selama 1 menit.',
+      );
+    }
   }
 
   Future<void> recordUserActivity() async {

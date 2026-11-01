@@ -25,6 +25,10 @@ class _SessionTimeoutListenerState extends ConsumerState<SessionTimeoutListener>
   Timer? _idleTimer;
   final _secure = SecureStorageService.instance;
 
+  /// Penulisan "waktu aktif terakhir" ke secure storage dibatasi agar tidak
+  /// dipanggil puluhan kali per detik saat pengguna scroll.
+  DateTime _lastActivityWrite = DateTime.fromMillisecondsSinceEpoch(0);
+
   @override
   void initState() {
     super.initState();
@@ -78,7 +82,11 @@ class _SessionTimeoutListenerState extends ConsumerState<SessionTimeoutListener>
         ref.read(authProvider).status == AuthStatus.authenticated;
     if (!isAuthenticated) return;
 
-    _secure.updateLastActive();
+    final now = DateTime.now();
+    if (now.difference(_lastActivityWrite) > const Duration(seconds: 5)) {
+      _lastActivityWrite = now;
+      _secure.updateLastActive();
+    }
     _resetIdleTimer();
   }
 
