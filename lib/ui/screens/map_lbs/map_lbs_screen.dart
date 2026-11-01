@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:kitabantu/core/constants/app_colors.dart';
 import 'package:kitabantu/data/models/campaign_model.dart';
 import 'package:kitabantu/data/repositories/campaign_repository.dart';
@@ -146,14 +147,30 @@ class _MapLbsScreenState extends State<MapLbsScreen> {
     _mapController.move(LatLng(c.latitude, c.longitude), 14.0);
   }
 
-  /// Tombol "directions": tampilkan posisi Anda & lokasi kampanye sekaligus.
-  void _showBothPoints(CampaignModel c) {
-    _mapController.fitCamera(
-      CameraFit.coordinates(
-        coordinates: [_currentPosition, LatLng(c.latitude, c.longitude)],
-        padding: const EdgeInsets.fromLTRB(60, 60, 60, 280),
-      ),
-    );
+  /// Tombol "directions": buka Google Maps (aplikasi, atau browser kalau
+  /// aplikasinya tidak ada) dengan tujuan lokasi kampanye. Titik awal
+  /// otomatis memakai posisi perangkat saat ini.
+  Future<void> _openDirections(CampaignModel c) async {
+    final uri = Uri.https('www.google.com', '/maps/dir/', {
+      'api': '1',
+      'destination': '${c.latitude},${c.longitude}',
+      'travelmode': 'driving',
+    });
+
+    var opened = false;
+    try {
+      opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      opened = false;
+    }
+
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tidak bisa membuka Google Maps di perangkat ini.'),
+        ),
+      );
+    }
   }
 
   // ───────────────────────── BUILD ───────────────────────────────────────────
@@ -611,9 +628,9 @@ class _MapLbsScreenState extends State<MapLbsScreen> {
           Row(
             children: [
               Tooltip(
-                message: 'Lihat posisi Anda & lokasi kampanye',
+                message: 'Buka rute di Google Maps',
                 child: OutlinedButton(
-                  onPressed: () => _showBothPoints(c),
+                  onPressed: () => _openDirections(c),
                   style: OutlinedButton.styleFrom(
                     padding: EdgeInsets.zero,
                     minimumSize: const Size(48, 48),

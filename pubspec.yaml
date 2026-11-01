@@ -34,6 +34,9 @@ dependencies:
   geolocator: ^13.0.2
   latlong2: ^0.9.1
 
+  # --- Buka Google Maps untuk rute ---
+  url_launcher: ^6.3.1
+
   # --- Waktu & Format (Bab 3) ---
   intl: ^0.20.2
   timezone: ^0.10.0
