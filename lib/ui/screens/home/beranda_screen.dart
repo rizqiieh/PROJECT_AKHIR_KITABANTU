@@ -12,6 +12,7 @@ import 'package:kitabantu/ui/screens/minigame/minigame_screen.dart';
 import 'package:kitabantu/ui/screens/utilities/converter_screen.dart';
 import 'package:kitabantu/ui/screens/utilities/zakat_calculator_screen.dart';
 import 'package:kitabantu/ui/widgets/campaign_card.dart';
+import 'package:kitabantu/ui/screens/utilities/ai_chat.dart';
 import '../campaign/scan_receipt_screen.dart';
 import 'package:kitabantu/ui/screens/home/zakat_detail_screen.dart';
 
@@ -66,494 +67,536 @@ class _BerandaScreenState extends ConsumerState<BerandaScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF1F8F4),
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'ai_zakat_fab',
+        tooltip: 'Tanya Asisten AI',
+        backgroundColor: const Color(0xFF26533C),
+        foregroundColor: Colors.white,
+        onPressed: () => showAiZakatChatSheet(context),
+        child: const Icon(Icons.auto_awesome),
+      ),
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async => ref.refresh(campaignsListProvider),
-          color: const Color(0xFF26533C),
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ── Top Bar: Logo & Notifikasi ──
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Image.asset(
-                            'assets/images/LogoKitaBantu.png',
-                            width: 32,
-                            height: 32,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'KitaBantu',
-                          style: TextStyle(
-                            fontSize: 19,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF1B3B2B),
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                      ],
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.notifications_none_rounded),
-                      color: const Color(0xFF1B3B2B),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Belum ada notifikasi baru'),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+        top: false, // header sendiri yang mengisi area status bar
+        child: Column(
+          children: [
+            // ── Header Statis (tidak ikut scroll) ──
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.fromLTRB(
+                16,
+                MediaQuery.of(context).padding.top + 12,
+                16,
+                16,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(24),
                 ),
-                const SizedBox(height: 16),
-
-                // ── Header Sapaan Pengguna ──
-                Text(
-                  'Assalamu\'alaikum, ${user?.fullName.split(' ').first ?? 'Ahmad'}',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1B3B2B),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Mari tebarkan manfaat dan kebaikan hari ini.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF5A6E63),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // ── Card: Kantong Amanah Anda ──
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Top Bar: Logo & Notifikasi ──
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Image.asset(
+                              'assets/images/LogoKitaBantu.png',
+                              width: 32,
+                              height: 32,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'KitaBantu',
+                            style: TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF1B3B2B),
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.notifications_none_rounded),
+                        color: const Color(0xFF1B3B2B),
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Belum ada notifikasi baru'),
+                              duration: Duration(seconds: 1),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
+                  const SizedBox(height: 16),
+
+                  // ── Header Sapaan Pengguna ──
+                  Text(
+                    'Assalamu\'alaikum, ${user?.fullName.split(' ').first ?? 'Ahmad'}',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1B3B2B),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Mari tebarkan manfaat dan kebaikan hari ini.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF5A6E63),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // ── Bagian yang bisa di-scroll ──
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async => ref.refresh(campaignsListProvider),
+                color: const Color(0xFF26533C),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // ── Card: Kantong Amanah Anda ──
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(5),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF26533C),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Icon(
+                                        Icons.account_balance_wallet_outlined,
+                                        color: Colors.white,
+                                        size: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      'Kantong Amanah Anda',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF2D3748),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE4F4EC),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Text(
+                                    'Terverifikasi',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF26533C),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        CurrencyUtils.formatIdr(user?.balance ?? 1000000.0),
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFF1B3B2B),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      const Text(
+                                        'Tersimpan aman di SQLite lokal',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF718096),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      onPressed: () => _showWalletHistoryBottomSheet(context),
+                                      icon: const Icon(Icons.history_rounded, color: Color(0xFF26533C)),
+                                      tooltip: 'Riwayat Transaksi',
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _showTopUpBottomSheet(context),
+                                      icon: const Icon(Icons.add_circle_outline, size: 14),
+                                      label: const Text(
+                                        'Top Up',
+                                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF26533C),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        elevation: 0,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(builder: (_) => const MapLbsScreen()),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.send_rounded, size: 14),
+                                    label: const Text(
+                                      'Kirim Donasi',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF26533C),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 11),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      elevation: 0,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const ZakatDetailScreen(),
+        ),
+      );
+                                    },
+                                    icon: const Icon(Icons.calculate_outlined, size: 15, color: Color(0xFF26533C)),
+                                    label: const Text(
+                                      'Zakat',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF26533C),
+                                      ),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFEBF6F0),
+                                      side: BorderSide.none,
+                                      padding: const EdgeInsets.symmetric(vertical: 11),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+
+                      // ── Section: Layanan Unggulan (Grid 3x2) ──
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(5),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF26533C),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Icon(
-                                  Icons.account_balance_wallet_outlined,
-                                  color: Colors.white,
-                                  size: 14,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Kantong Amanah Anda',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF2D3748),
-                                ),
-                              ),
-                            ],
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE4F4EC),
-                              borderRadius: BorderRadius.circular(12),
+                        children: const [
+                          Text(
+                            'Layanan Unggulan',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1B3B2B),
                             ),
-                            child: const Text(
-                              'Terverifikasi',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF26533C),
-                              ),
+                          ),
+                          Text(
+                            'Gotong Royong',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF26533C),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                      GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 1.15,
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  CurrencyUtils.formatIdr(user?.balance ?? 1000000.0),
-                                  style: const TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF1B3B2B),
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                const Text(
-                                  'Tersimpan aman di SQLite lokal',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Color(0xFF718096),
-                                  ),
-                                ),
-                              ],
+                          _StitchMenuCard(
+                            icon: Icons.location_on_outlined,
+                            label: 'Peta Bantuan',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const MapLbsScreen()),
                             ),
                           ),
+                          _StitchMenuCard(
+                            icon: Icons.calculate_outlined,
+                            label: 'Kalkulator Zakat',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const ZakatCalculatorScreen()),
+                            ),
+                          ),
+                          _StitchMenuCard(
+                            icon: Icons.currency_exchange_rounded,
+                            label: 'Kurs & Waktu',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const ConverterScreen()),
+                            ),
+                          ),
+                          _StitchMenuCard(
+                            icon: Icons.verified_user_outlined,
+                            label: 'Ledger Sahih',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const LedgerScreen()),
+                            ),
+                          ),
+                          _StitchMenuCard(
+                            icon: Icons.sports_esports_outlined,
+                            label: 'Mini-Game',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const MinigameScreen()),
+                            ),
+                          ),
+                          _StitchMenuCard(
+                            icon: Icons.document_scanner_outlined,
+                            label: 'AI Scan Nota',
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const ScanReceiptScreen()),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 22),
+
+                      // ── Input Cari Kampanye (RF-004) ──
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: 'Cari kampanye atau lokasi...',
+                            prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF718096)),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                            ),
+                          ),
+                          onChanged: (query) {
+                            setState(() {});
+                          },
+                        ),
+                      ),
+
+                      // ── Filter Kategori Chips ──
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: _categories.map((cat) {
+                            final isSelected = selectedCategory == cat;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: Text(cat),
+                                selected: isSelected,
+                                selectedColor: const Color(0xFF26533C),
+                                backgroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  side: BorderSide(
+                                    color: isSelected ? Colors.transparent : Colors.black12,
+                                  ),
+                                ),
+                                labelStyle: TextStyle(
+                                  color: isSelected ? Colors.white : const Color(0xFF4A5568),
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                  fontSize: 12,
+                                ),
+                                onSelected: (val) {
+                                  if (val) {
+                                    ref.read(selectedCategoryProvider.notifier).state = cat;
+                                  }
+                                },
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+
+                      // ── Section: Mendekati Deadline ──
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
                           Row(
                             children: [
-                              IconButton(
-                                onPressed: () => _showWalletHistoryBottomSheet(context),
-                                icon: const Icon(Icons.history_rounded, color: Color(0xFF26533C)),
-                                tooltip: 'Riwayat Transaksi',
-                              ),
-                              ElevatedButton.icon(
-                                onPressed: () => _showTopUpBottomSheet(context),
-                                icon: const Icon(Icons.add_circle_outline, size: 14),
-                                label: const Text(
-                                  'Top Up',
-                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              const Text(
+                                'Mendekati Deadline',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1B3B2B),
                                 ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF26533C),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFECEB),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'Mendesak',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFFE53E3E),
                                   ),
-                                  elevation: 0,
                                 ),
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (_) => const MapLbsScreen()),
-                                );
-                              },
-                              icon: const Icon(Icons.send_rounded, size: 14),
-                              label: const Text(
-                                'Kirim Donasi',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF26533C),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 11),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                elevation: 0,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                Navigator.of(context).push(
-  MaterialPageRoute(
-    builder: (_) => const ZakatDetailScreen(),
-  ),
-);
-                              },
-                              icon: const Icon(Icons.calculate_outlined, size: 15, color: Color(0xFF26533C)),
-                              label: const Text(
-                                'Zakat',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF26533C),
-                                ),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: const Color(0xFFEBF6F0),
-                                side: BorderSide.none,
-                                padding: const EdgeInsets.symmetric(vertical: 11),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
+                          TextButton(
+                            onPressed: () {
+                              ref.read(selectedCategoryProvider.notifier).state = 'Semua';
+                              _searchController.clear();
+                              ref.read(campaignSearchQueryProvider.notifier).state = '';
+                            },
+                            child: const Text(
+                              'Lihat Semua',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF26533C),
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
                         ],
                       ),
+                      const SizedBox(height: 8),
+
+                      // ── Daftar Kampanye ──
+                      campaignsAsync.when(
+                        loading: () => const Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 40),
+                            child: CircularProgressIndicator(color: Color(0xFF26533C)),
+                          ),
+                        ),
+                        error: (err, _) => Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 30),
+                            child: Text('Gagal memuat kampanye: $err'),
+                          ),
+                        ),
+                        data: (campaigns) {
+                          final query = _searchController.text.toLowerCase();
+                          final filteredList = campaigns.where((item) {
+                            final matchesCategory = selectedCategory == 'Semua' || item.category == selectedCategory;
+                            final matchesSearch = item.title.toLowerCase().contains(query);
+                            return matchesCategory && matchesSearch;
+                          }).toList();
+
+                          if (filteredList.isEmpty) {
+                            return _buildEmptyState();
+                          }
+
+                          return ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: filteredList.length,
+                            separatorBuilder: (_, _) => const SizedBox(height: 12),
+                            itemBuilder: (ctx, idx) {
+                              return CampaignCard(campaign: filteredList[idx]);
+                            },
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 88),
                     ],
                   ),
                 ),
-                const SizedBox(height: 22),
-
-                // ── Section: Layanan Unggulan (Grid 3x2) ──
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    Text(
-                      'Layanan Unggulan',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1B3B2B),
-                      ),
-                    ),
-                    Text(
-                      'Gotong Royong',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF26533C),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 1.15,
-                  children: [
-                    _StitchMenuCard(
-                      icon: Icons.location_on_outlined,
-                      label: 'Peta Bantuan',
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const MapLbsScreen()),
-                      ),
-                    ),
-                    _StitchMenuCard(
-                      icon: Icons.auto_awesome_outlined,
-                      label: 'Kalkulator AI',
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const ZakatCalculatorScreen()),
-                      ),
-                    ),
-                    _StitchMenuCard(
-                      icon: Icons.currency_exchange_rounded,
-                      label: 'Kurs & Waktu',
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const ConverterScreen()),
-                      ),
-                    ),
-                    _StitchMenuCard(
-                      icon: Icons.verified_user_outlined,
-                      label: 'Ledger Sahih',
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const LedgerScreen()),
-                      ),
-                    ),
-                    _StitchMenuCard(
-                      icon: Icons.sports_esports_outlined,
-                      label: 'Mini-Game',
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const MinigameScreen()),
-                      ),
-                    ),
-                    _StitchMenuCard(
-                      icon: Icons.document_scanner_outlined,
-                      label: 'AI Scan Nota',
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const ScanReceiptScreen()),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 22),
-
-                // ── Input Cari Kampanye (RF-004) ──
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Cari kampanye atau lokasi...',
-                      prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF718096)),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                      ),
-                    ),
-                    onChanged: (query) {
-                      setState(() {});
-                    },
-                  ),
-                ),
-
-                // ── Filter Kategori Chips ──
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _categories.map((cat) {
-                      final isSelected = selectedCategory == cat;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          label: Text(cat),
-                          selected: isSelected,
-                          selectedColor: const Color(0xFF26533C),
-                          backgroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            side: BorderSide(
-                              color: isSelected ? Colors.transparent : Colors.black12,
-                            ),
-                          ),
-                          labelStyle: TextStyle(
-                            color: isSelected ? Colors.white : const Color(0xFF4A5568),
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            fontSize: 12,
-                          ),
-                          onSelected: (val) {
-                            if (val) {
-                              ref.read(selectedCategoryProvider.notifier).state = cat;
-                            }
-                          },
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                const SizedBox(height: 18),
-
-                // ── Section: Mendekati Deadline ──
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        const Text(
-                          'Mendekati Deadline',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1B3B2B),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFECEB),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Text(
-                            'Mendesak',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFE53E3E),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        ref.read(selectedCategoryProvider.notifier).state = 'Semua';
-                        _searchController.clear();
-                        ref.read(campaignSearchQueryProvider.notifier).state = '';
-                      },
-                      child: const Text(
-                        'Lihat Semua',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF26533C),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                // ── Daftar Kampanye ──
-                campaignsAsync.when(
-                  loading: () => const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 40),
-                      child: CircularProgressIndicator(color: Color(0xFF26533C)),
-                    ),
-                  ),
-                  error: (err, _) => Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 30),
-                      child: Text('Gagal memuat kampanye: $err'),
-                    ),
-                  ),
-                  data: (campaigns) {
-                    final query = _searchController.text.toLowerCase();
-                    final filteredList = campaigns.where((item) {
-                      final matchesCategory = selectedCategory == 'Semua' || item.category == selectedCategory;
-                      final matchesSearch = item.title.toLowerCase().contains(query);
-                      return matchesCategory && matchesSearch;
-                    }).toList();
-
-                    if (filteredList.isEmpty) {
-                      return _buildEmptyState();
-                    }
-
-                    return ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: filteredList.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (ctx, idx) {
-                        return CampaignCard(campaign: filteredList[idx]);
-                      },
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

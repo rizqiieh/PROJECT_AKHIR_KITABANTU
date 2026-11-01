@@ -5,10 +5,12 @@ import 'package:kitabantu/core/utils/currency_utils.dart';
 import 'package:kitabantu/core/utils/zakat_calculator_utils.dart';
 import 'package:kitabantu/data/local/database_helper.dart';
 import 'package:kitabantu/data/models/zakat_history_model.dart';
-import 'package:kitabantu/data/remote/gemini_ai_service.dart';
 import 'package:kitabantu/providers/auth_provider.dart';
 
-/// Halaman Kalkulator & Asisten AI Zakat (Bab 6 §7 — RF-008).
+/// Halaman Kalkulator Zakat (Bab 6 §7 — RF-008).
+///
+/// Asisten AI zakat sudah dipindah ke tombol mengambang di Beranda
+/// (lihat `ui/widgets/ai_chat_sheet.dart`).
 class ZakatCalculatorScreen extends ConsumerStatefulWidget {
   const ZakatCalculatorScreen({super.key});
 
@@ -17,10 +19,7 @@ class ZakatCalculatorScreen extends ConsumerStatefulWidget {
       _ZakatCalculatorScreenState();
 }
 
-class _ZakatCalculatorScreenState extends ConsumerState<ZakatCalculatorScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
+class _ZakatCalculatorScreenState extends ConsumerState<ZakatCalculatorScreen> {
   // ── State Kalkulator Zakat ──
   String _selectedZakatType = 'Penghasilan'; // 'Penghasilan' atau 'Maal'
   final _wealthController = TextEditingController(text: '10000000');
@@ -29,21 +28,9 @@ class _ZakatCalculatorScreenState extends ConsumerState<ZakatCalculatorScreen>
       TextEditingController(text: '1300000'); // Rp 1.300.000 / gram
   ZakatCalculationResult? _result;
 
-  // ── State Chat AI ──
-  final _chatInputCtrl = TextEditingController();
-  final List<Map<String, String>> _messages = [
-    {
-      'role': 'ai',
-      'text':
-          'Assalamu\'alaikum! Saya Pakar Fiqih Zakat dan Filantropi Islam KitaBantu. Silakan tanyakan studi kasus keuangan Anda—seperti analisis gaji/penghasilan, emas, tabungan, saham, kaitan pajak dan zakat, atau kriteria penerima (asnaf).'
-    }
-  ];
-  bool _isAiThinking = false;
-
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _calculateZakat();
   }
 
@@ -74,11 +61,9 @@ class _ZakatCalculatorScreenState extends ConsumerState<ZakatCalculatorScreen>
 
   @override
   void dispose() {
-    _tabController.dispose();
     _wealthController.dispose();
     _expenseController.dispose();
     _goldPriceController.dispose();
-    _chatInputCtrl.dispose();
     super.dispose();
   }
 
@@ -86,30 +71,14 @@ class _ZakatCalculatorScreenState extends ConsumerState<ZakatCalculatorScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kalkulator & AI Zakat'),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(icon: Icon(Icons.calculate), text: 'Kalkulator Fiqih'),
-            Tab(icon: Icon(Icons.smart_toy), text: 'Konsultasi AI'),
-          ],
-        ),
+        title: const Text('Kalkulator Zakat'),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildCalculatorTab(),
-          _buildAiChatTab(),
-        ],
-      ),
+      body: _buildCalculatorTab(),
     );
   }
 
   // ══════════════════════════════════════════════════════
-  //  Tab 1: Kalkulator Zakat Fiqih
+  //  Kalkulator Zakat Fiqih
   // ══════════════════════════════════════════════════════
 
   Widget _buildCalculatorTab() {
@@ -291,174 +260,6 @@ class _ZakatCalculatorScreenState extends ConsumerState<ZakatCalculatorScreen>
           behavior: SnackBarBehavior.floating,
         ),
       );
-    }
-  }
-
-  // ══════════════════════════════════════════════════════
-  //  Tab 2: Tanya Jawab Asisten AI Zakat (Gemini)
-  // ══════════════════════════════════════════════════════
-
-  Widget _buildAiChatTab() {
-    return Column(
-      children: [
-        // ── Quick Topic Chips ──
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          color: AppColors.surfaceVariant.withValues(alpha: 0.5),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildQuickChip('Gaji 12 juta sebulan, berapa zakatnya?'),
-                _buildQuickChip('Punya emas 100 gram, wajib zakat?'),
-                _buildQuickChip('Sudah bayar pajak, masih wajib zakat?'),
-                _buildQuickChip('Bolehkah zakat untuk saudara kandung?'),
-                _buildQuickChip('Siapa saja 8 asnaf penerima?'),
-              ],
-            ),
-          ),
-        ),
-
-        // ── Daftar Pesan Chat ──
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: _messages.length,
-            itemBuilder: (ctx, idx) {
-              final msg = _messages[idx];
-              final isUser = msg['role'] == 'user';
-              return Align(
-                alignment:
-                    isUser ? Alignment.centerRight : Alignment.centerLeft,
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(14),
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width * 0.8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isUser ? AppColors.primary : AppColors.surface,
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(16),
-                      topRight: const Radius.circular(16),
-                      bottomLeft: isUser
-                          ? const Radius.circular(16)
-                          : const Radius.circular(2),
-                      bottomRight: isUser
-                          ? const Radius.circular(2)
-                          : const Radius.circular(16),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    msg['text'] ?? '',
-                    style: TextStyle(
-                      color: isUser ? Colors.white : AppColors.onSurface,
-                      fontSize: 13,
-                      height: 1.5,
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-
-        if (_isAiThinking)
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                SizedBox(width: 8),
-                Text('Asisten AI sedang menyusun jawaban...',
-                    style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant)),
-              ],
-            ),
-          ),
-
-        // ── Input Bar ──
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 4,
-                offset: const Offset(0, -2),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _chatInputCtrl,
-                    decoration: const InputDecoration(
-                      hintText: 'Tanyakan studi kasus harta atau fiqih zakat...',
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 14),
-                    ),
-                    onSubmitted: (val) => _sendChatMessage(val),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.send, color: AppColors.primary),
-                  onPressed: () => _sendChatMessage(_chatInputCtrl.text),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickChip(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ActionChip(
-        label: Text(text, style: const TextStyle(fontSize: 11)),
-        onPressed: () => _sendChatMessage(text),
-      ),
-    );
-  }
-
-  Future<void> _sendChatMessage(String question) async {
-    final q = question.trim();
-    if (q.isEmpty) return;
-
-    final history = List<Map<String, String>>.from(_messages);
-
-    setState(() {
-      _messages.add({'role': 'user', 'text': q});
-      _chatInputCtrl.clear();
-      _isAiThinking = true;
-    });
-
-    final answer = await GeminiAiService.instance.askZakatQuestion(
-      q,
-      history: history,
-    );
-
-    if (mounted) {
-      setState(() {
-        _isAiThinking = false;
-        _messages.add({'role': 'ai', 'text': answer});
-      });
     }
   }
 }
