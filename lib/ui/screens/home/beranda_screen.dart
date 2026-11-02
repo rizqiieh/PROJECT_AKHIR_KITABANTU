@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kitabantu/core/utils/currency_utils.dart';
-import 'package:kitabantu/core/services/notification_service.dart';
 import 'package:kitabantu/data/local/database_helper.dart';
 import 'package:kitabantu/data/models/wallet_transaction_model.dart';
 import 'package:kitabantu/providers/auth_provider.dart';
@@ -13,6 +12,7 @@ import 'package:kitabantu/ui/screens/utilities/converter_screen.dart';
 import 'package:kitabantu/ui/screens/utilities/zakat_calculator_screen.dart';
 import 'package:kitabantu/ui/widgets/campaign_card.dart';
 import 'package:kitabantu/ui/screens/utilities/ai_chat.dart';
+import 'package:kitabantu/ui/screens/payment/payment_screen.dart';
 import '../campaign/scan_receipt_screen.dart';
 import 'package:kitabantu/ui/screens/home/zakat_detail_screen.dart';
 
@@ -41,13 +41,39 @@ class _BerandaScreenState extends ConsumerState<BerandaScreen> {
     super.dispose();
   }
 
-  void _showTopUpBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => const _TopUpBottomSheet(),
-    );
+  /// Alur top up: pilih nominal & metode → halaman pembayaran.
+  /// Kalau di halaman pembayaran pengguna memilih "Ganti metode", bottom sheet
+  /// dibuka lagi dengan nominal & metode sebelumnya sudah terisi.
+  Future<void> _showTopUpBottomSheet() async {
+    double? amount;
+    String? method;
+
+    while (mounted) {
+      final request = await showModalBottomSheet<_TopUpRequest>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => _TopUpBottomSheet(
+          initialAmount: amount,
+          initialMethod: method,
+        ),
+      );
+      if (request == null || !mounted) return;
+
+      final session = PaymentSession(
+        amount: request.amount,
+        method: request.method,
+      );
+      final exit = await Navigator.of(context).push<PaymentExit>(
+        MaterialPageRoute(
+          builder: (_) => PaymentWaitingScreen(session: session),
+        ),
+      );
+      if (exit != PaymentExit.changeMethod) return;
+
+      amount = request.amount;
+      method = request.method;
+    }
   }
 
   void _showWalletHistoryBottomSheet(BuildContext context) {
@@ -279,7 +305,7 @@ class _BerandaScreenState extends ConsumerState<BerandaScreen> {
                                       tooltip: 'Riwayat Transaksi',
                                     ),
                                     ElevatedButton.icon(
-                                      onPressed: () => _showTopUpBottomSheet(context),
+                                      onPressed: _showTopUpBottomSheet,
                                       icon: const Icon(Icons.add_circle_outline, size: 14),
                                       label: const Text(
                                         'Top Up',
@@ -718,9 +744,21 @@ class _StitchMenuCardState extends State<_StitchMenuCard> {
   }
 }
 
+/// Hasil dari bottom sheet Top Up: nominal & metode yang dipilih.
+class _TopUpRequest {
+  final double amount;
+  final String method;
+
+  const _TopUpRequest({required this.amount, required this.method});
+}
+
 /// Bottom Sheet Interaktif Top Up Saldo Kantong Amanah (Simulasi SQLite)
 class _TopUpBottomSheet extends ConsumerStatefulWidget {
-  const _TopUpBottomSheet();
+  /// Nilai awal (dipakai saat kembali dari halaman pembayaran).
+  final double? initialAmount;
+  final String? initialMethod;
+
+  const _TopUpBottomSheet({this.initialAmount, this.initialMethod});
 
   @override
   ConsumerState<_TopUpBottomSheet> createState() => _TopUpBottomSheetState();
@@ -730,7 +768,6 @@ class _TopUpBottomSheetState extends ConsumerState<_TopUpBottomSheet> {
   final _amountController = TextEditingController(text: '100000');
   double _selectedAmount = 100000.0;
   String _selectedMethod = 'QRIS';
-  bool _isProcessing = false;
 
   final List<double> _presets = [
     20000.0,
@@ -765,6 +802,18 @@ class _TopUpBottomSheetState extends ConsumerState<_TopUpBottomSheet> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.initialAmount != null) {
+      _selectedAmount = widget.initialAmount!;
+      _amountController.text = _selectedAmount.toInt().toString();
+    }
+    if (widget.initialMethod != null) {
+      _selectedMethod = widget.initialMethod!;
+    }
+  }
+
+  @override
   void dispose() {
     _amountController.dispose();
     super.dispose();
@@ -777,7 +826,9 @@ class _TopUpBottomSheetState extends ConsumerState<_TopUpBottomSheet> {
     });
   }
 
-  Future<void> _processTopUp() async {
+  /// Tutup bottom sheet dan kirim pilihan ke Beranda, yang kemudian membuka
+  /// halaman pembayaran. Saldo baru bertambah setelah pembayaran berhasil.
+  void _processTopUp() {
     if (_selectedAmount < 10000) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -788,104 +839,9 @@ class _TopUpBottomSheetState extends ConsumerState<_TopUpBottomSheet> {
       return;
     }
 
-    setState(() => _isProcessing = true);
-
-    try {
-      final success = await ref.read(authProvider.notifier).topUpBalance(
-            _selectedAmount,
-            method: _selectedMethod,
-          );
-
-      if (!success) {
-        throw Exception('Gagal memperbarui saldo di database SQLite.');
-      }
-
-      final updatedUser = ref.read(authProvider).user;
-      final newBalanceStr = CurrencyUtils.formatIdr(updatedUser?.balance ?? 0.0);
-      final addedAmountStr = CurrencyUtils.formatIdr(_selectedAmount);
-
-      await NotificationService.instance.showTopUpSuccessNotification(
-        amountFormatted: addedAmountStr,
-        newBalanceFormatted: newBalanceStr,
-      );
-
-      if (!mounted) return;
-      Navigator.pop(context);
-
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          icon: const Icon(Icons.check_circle_rounded, color: Color(0xFF26533C), size: 54),
-          title: const Text('Top Up Berhasil!', style: TextStyle(fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Saldo Kantong Amanah Anda berhasil ditambahkan ke database SQLite:'),
-              const SizedBox(height: 12),
-              _dialogRow('Nominal Masuk:', addedAmountStr),
-              _dialogRow('Metode Pembayaran:', _selectedMethod),
-              _dialogRow('Total Saldo Saat Ini:', newBalanceStr),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8F5E9),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.shield_outlined, size: 16, color: Color(0xFF26533C)),
-                    SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'Data saldo tersimpan aman dan terintegrasi penuh.',
-                        style: TextStyle(fontSize: 11, color: Color(0xFF26533C)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF26533C),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: const Text('Tutup'),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Terjadi kesalahan: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isProcessing = false);
-    }
-  }
-
-  Widget _dialogRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)),
-          Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1B3B2B))),
-        ],
-      ),
+    Navigator.pop(
+      context,
+      _TopUpRequest(amount: _selectedAmount, method: _selectedMethod),
     );
   }
 
@@ -1018,23 +974,17 @@ class _TopUpBottomSheetState extends ConsumerState<_TopUpBottomSheet> {
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
-                onPressed: _isProcessing ? null : _processTopUp,
+                onPressed: _processTopUp,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF26533C),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
-                child: _isProcessing
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : Text(
-                        'Konfirmasi Top Up ${CurrencyUtils.formatIdr(_selectedAmount)}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                      ),
+                child: Text(
+                  'Lanjutkan Pembayaran ${CurrencyUtils.formatIdr(_selectedAmount)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
               ),
             ),
           ],

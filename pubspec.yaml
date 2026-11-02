@@ -37,6 +37,9 @@ dependencies:
   # --- Buka Google Maps untuk rute ---
   url_launcher: ^6.3.1
 
+  # --- QR Code pembayaran (simulasi QRIS) ---
+  qr_flutter: ^4.1.0
+
   # --- Waktu & Format (Bab 3) ---
   intl: ^0.20.2
   timezone: ^0.10.0
