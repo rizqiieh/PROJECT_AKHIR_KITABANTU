@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:kitabantu/core/constants/app_colors.dart';
 import 'package:kitabantu/core/utils/currency_utils.dart';
-import 'package:kitabantu/core/utils/time_zone_utils.dart';
 import 'package:kitabantu/data/remote/currency_api_service.dart';
+import 'package:kitabantu/data/remote/prayer_api_service.dart';
 
-/// Layar Konverter Mata Uang & Zona Waktu (Bab 6 §4 — RF-006).
+
 class ConverterScreen extends StatefulWidget {
   const ConverterScreen({super.key});
 
@@ -13,8 +13,7 @@ class ConverterScreen extends StatefulWidget {
   State<ConverterScreen> createState() => _ConverterScreenState();
 }
 
-class _ConverterScreenState extends State<ConverterScreen>
-    with SingleTickerProviderStateMixin {
+class _ConverterScreenState extends State<ConverterScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   // ── State Konverter Mata Uang ──
@@ -24,15 +23,18 @@ class _ConverterScreenState extends State<ConverterScreen>
   Map<String, double> _rates = CurrencyUtils.defaultRatesToIdr;
   bool _isLoadingRates = false;
 
-  // ── State Konverter Waktu ──
-  DateTime _selectedDateTime = DateTime.now();
-  String _sourceZone = 'WIB';
+  // ── State Multi-Zona Waktu & Sholat ──
+  final Map<String, Map<String, dynamic>?> _zonePrayers = {};
+  bool _isLoadingZones = false;
+  String _gpsStatus = 'Mendeteksi lokasi...';
+  String _currentLocalZone = '-';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _fetchRates();
+    _fetchAllZoneData(); // Tarik data 5 negara saat layar dibuka
   }
 
   Future<void> _fetchRates() async {
@@ -46,6 +48,61 @@ class _ConverterScreenState extends State<ConverterScreen>
     }
   }
 
+  Future<void> _fetchAllZoneData() async {
+    setState(() {
+      _isLoadingZones = true;
+      _gpsStatus = 'Mendapatkan sinyal GPS...';
+    });
+
+    // 1. Deteksi Zona Waktu Saat Ini
+    final offsetHours = DateTime.now().timeZoneOffset.inHours;
+    if (offsetHours == 7) _currentLocalZone = 'WIB (UTC+7)';
+    else if (offsetHours == 8) _currentLocalZone = 'WITA (UTC+8)';
+    else if (offsetHours == 9) _currentLocalZone = 'WIT (UTC+9)';
+    else _currentLocalZone = 'UTC${offsetHours >= 0 ? '+' : ''}$offsetHours';
+
+    // 2. Deteksi GPS (Untuk status saja)
+    try {
+      Position pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      _gpsStatus = 'Lokasi Akurat: Lat ${pos.latitude.toStringAsFixed(3)}, Lng ${pos.longitude.toStringAsFixed(3)}';
+    } catch (e) {
+      _gpsStatus = 'GPS tidak aktif / izin ditolak';
+    }
+
+    // 3. Tarik API Waktu Sholat 5 Kota Perwakilan Sekaligus
+    dynamic wibRes;
+    dynamic witaRes;
+    dynamic witRes;
+    dynamic uaeRes;
+    dynamic londonRes;
+
+    try {
+      wibRes = await PrayerApiService.instance.fetchPrayerTimesByCity('Jakarta', 'Indonesia');
+      witaRes = await PrayerApiService.instance.fetchPrayerTimesByCity('Makassar', 'Indonesia');
+      witRes = await PrayerApiService.instance.fetchPrayerTimesByCity('Jayapura', 'Indonesia');
+      uaeRes = await PrayerApiService.instance.fetchPrayerTimesByCity('Dubai', 'United Arab Emirates');
+      londonRes = await PrayerApiService.instance.fetchPrayerTimesByCity('London', 'United Kingdom');
+    } catch (_) {}
+
+    if (mounted) {
+      setState(() {
+        _zonePrayers['WIB'] = wibRes;
+        _zonePrayers['WITA'] = witaRes;
+        _zonePrayers['WIT'] = witRes;
+        _zonePrayers['UAE'] = uaeRes;
+        _zonePrayers['London'] = londonRes;
+        _isLoadingZones = false;
+      });
+    }
+  }
+
+  // Fungsi konversi jam real-time berdasarkan zona
+  String _getZoneTime(int utcOffset) {
+    final utcNow = DateTime.now().toUtc();
+    final zoneTime = utcNow.add(Duration(hours: utcOffset));
+    return "${zoneTime.hour.toString().padLeft(2, '0')}:${zoneTime.minute.toString().padLeft(2, '0')}";
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -57,7 +114,7 @@ class _ConverterScreenState extends State<ConverterScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Konverter Kurs & Waktu'),
+        title: const Text('Konverter & Zona Sholat'),
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
@@ -65,7 +122,7 @@ class _ConverterScreenState extends State<ConverterScreen>
           unselectedLabelColor: Colors.white70,
           tabs: const [
             Tab(icon: Icon(Icons.currency_exchange), text: 'Kurs Mata Uang'),
-            Tab(icon: Icon(Icons.schedule), text: 'Zona Waktu'),
+            Tab(icon: Icon(Icons.public), text: 'Zona Sholat'),
           ],
         ),
       ),
@@ -73,37 +130,24 @@ class _ConverterScreenState extends State<ConverterScreen>
         controller: _tabController,
         children: [
           _buildCurrencyTab(),
-          _buildTimeZoneTab(),
+          _buildMultiZoneTab(),
         ],
       ),
     );
   }
 
   // ══════════════════════════════════════════════════════
-  //  Tab 1: Konverter Mata Uang
+  //  Tab 1: Konverter Mata Uang (Tetap Sama)
   // ══════════════════════════════════════════════════════
-
   Widget _buildCurrencyTab() {
     final amount = double.tryParse(_amountCtrl.text) ?? 0.0;
     double result = 0.0;
     try {
-      result = CurrencyUtils.convert(
-        amount: amount,
-        fromCurrency: _fromCurrency,
-        toCurrency: _toCurrency,
-        ratesToIdr: _rates,
-      );
+      result = CurrencyUtils.convert(amount: amount, fromCurrency: _fromCurrency, toCurrency: _toCurrency, ratesToIdr: _rates);
     } catch (_) {}
 
     final allConverted = CurrencyUtils.convertIdrToAll(
-      _fromCurrency == 'IDR'
-          ? amount
-          : CurrencyUtils.convert(
-              amount: amount,
-              fromCurrency: _fromCurrency,
-              toCurrency: 'IDR',
-              ratesToIdr: _rates,
-            ),
+      _fromCurrency == 'IDR' ? amount : CurrencyUtils.convert(amount: amount, fromCurrency: _fromCurrency, toCurrency: 'IDR', ratesToIdr: _rates),
       _rates,
     );
 
@@ -115,130 +159,70 @@ class _ConverterScreenState extends State<ConverterScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Kalkulasi Nilai Tukar:',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+              const Text('Kalkulasi Nilai Tukar:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
               TextButton.icon(
                 onPressed: _isLoadingRates ? null : _fetchRates,
-                icon: _isLoadingRates
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.sync, size: 16),
+                icon: _isLoadingRates ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.sync, size: 16),
                 label: const Text('Perbarui Kurs', style: TextStyle(fontSize: 12)),
               ),
             ],
           ),
           const SizedBox(height: 8),
-
-          // ── Input Nominal ──
           TextField(
             controller: _amountCtrl,
             keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: 'Jumlah Nominal',
-              prefixText: '$_fromCurrency ',
-            ),
+            decoration: InputDecoration(labelText: 'Jumlah Nominal', prefixText: '$_fromCurrency '),
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 16),
-
-          // ── Selector Dari & Ke ──
           Row(
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
                   initialValue: _fromCurrency,
                   decoration: const InputDecoration(labelText: 'Dari'),
-                  // OPSI AED DITAMBAHKAN DI SINI
-                  items: ['IDR', 'USD', 'EUR', 'GBP', 'AED']
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                      .toList(),
-                  onChanged: (val) {
-                    if (val != null) setState(() => _fromCurrency = val);
-                  },
+                  items: ['IDR', 'USD', 'EUR', 'GBP', 'AED'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                  onChanged: (val) { if (val != null) setState(() => _fromCurrency = val); },
                 ),
               ),
               IconButton(
                 icon: const Icon(Icons.swap_horiz, color: AppColors.primary),
-                onPressed: () {
-                  setState(() {
-                    final temp = _fromCurrency;
-                    _fromCurrency = _toCurrency;
-                    _toCurrency = temp;
-                  });
-                },
+                onPressed: () { setState(() { final temp = _fromCurrency; _fromCurrency = _toCurrency; _toCurrency = temp; }); },
               ),
               Expanded(
                 child: DropdownButtonFormField<String>(
                   initialValue: _toCurrency,
                   decoration: const InputDecoration(labelText: 'Ke'),
-                  // OPSI AED DITAMBAHKAN DI SINI
-                  items: ['IDR', 'USD', 'EUR', 'GBP', 'AED']
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                      .toList(),
-                  onChanged: (val) {
-                    if (val != null) setState(() => _toCurrency = val);
-                  },
+                  items: ['IDR', 'USD', 'EUR', 'GBP', 'AED'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                  onChanged: (val) { if (val != null) setState(() => _toCurrency = val); },
                 ),
               ),
             ],
           ),
           const SizedBox(height: 20),
-
-          // ── Hasil Konversi Utama ──
           Card(
             color: AppColors.primary,
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  Text(
-                    'Hasil Konversi:',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      fontSize: 13,
-                    ),
-                  ),
+                  Text('Hasil Konversi:', style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13)),
                   const SizedBox(height: 6),
-                  Text(
-                    CurrencyUtils.formatCurrency(result, _toCurrency),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  Text(CurrencyUtils.formatCurrency(result, _toCurrency), style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Text(
-                    '${CurrencyUtils.formatCurrency(amount, _fromCurrency)} = ${CurrencyUtils.formatCurrency(result, _toCurrency)}',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontSize: 12,
-                    ),
-                  ),
+                  Text('${CurrencyUtils.formatCurrency(amount, _fromCurrency)} = ${CurrencyUtils.formatCurrency(result, _toCurrency)}', style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 12)),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 24),
-
-          // ── Ringkasan Nilai dalam Semua Mata Uang ──
-          const Text('Konversi Serempak ke 5 Mata Uang:',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          const Text('Konversi Serempak ke 5 Mata Uang:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
           const SizedBox(height: 10),
-          _currencyRow('🇮🇩 Rupiah Indonesia (IDR):',
-              CurrencyUtils.formatIdr(allConverted['IDR'] ?? 0)),
-          _currencyRow('🇺🇸 Dolar Amerika (USD):',
-              CurrencyUtils.formatCurrency(allConverted['USD'] ?? 0, 'USD')),
-          _currencyRow('🇪🇺 Euro Uni Eropa (EUR):',
-              CurrencyUtils.formatCurrency(allConverted['EUR'] ?? 0, 'EUR')),
-          _currencyRow('🇬🇧 Pound Sterling Britania (GBP):',
-              CurrencyUtils.formatCurrency(allConverted['GBP'] ?? 0, 'GBP')),
-          // BARIS HASIL UNTUK DIRHAM DITAMBAHKAN DI SINI
-          _currencyRow('🇦🇪 Dirham Uni Emirat Arab (AED):',
-              CurrencyUtils.formatCurrency(allConverted['AED'] ?? 0, 'AED')),
+          _currencyRow('🇮🇩 Rupiah Indonesia (IDR):', CurrencyUtils.formatIdr(allConverted['IDR'] ?? 0)),
+          _currencyRow('🇺🇸 Dolar Amerika (USD):', CurrencyUtils.formatCurrency(allConverted['USD'] ?? 0, 'USD')),
+          _currencyRow('🇪🇺 Euro Uni Eropa (EUR):', CurrencyUtils.formatCurrency(allConverted['EUR'] ?? 0, 'EUR')),
+          _currencyRow('🇬🇧 Pound Sterling Britania (GBP):', CurrencyUtils.formatCurrency(allConverted['GBP'] ?? 0, 'GBP')),
+          _currencyRow('🇦🇪 Dirham Uni Emirat Arab (AED):', CurrencyUtils.formatCurrency(allConverted['AED'] ?? 0, 'AED')),
         ],
       ),
     );
@@ -261,153 +245,149 @@ class _ConverterScreenState extends State<ConverterScreen>
   }
 
   // ══════════════════════════════════════════════════════
-  //  Tab 2: Konverter Zona Waktu
+  //  Tab 2: Zona Waktu & Waktu Sholat 5 Wilayah
   // ══════════════════════════════════════════════════════
-
-  Widget _buildTimeZoneTab() {
-    // Ubah _selectedDateTime ke UTC berdasarkan sourceZone dulu
-    final localTzDateTime = TimeZoneUtils.convertToZone(_selectedDateTime, _sourceZone);
-    final allZones = TimeZoneUtils.formatAllFourZones(localTzDateTime);
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Pilih Waktu Acuan:',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-
-          // ── Card Pemilih Waktu ──
-          Card(
-            margin: EdgeInsets.zero,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          DateFormat('EEEE, dd MMMM yyyy HH:mm', 'id_ID')
-                              .format(_selectedDateTime),
-                          style: const TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.edit_calendar,
-                            color: AppColors.primary),
-                        onPressed: _pickDateTime,
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 16),
-                  Row(
-                    children: [
-                      const Text('Zona Waktu Asal: ',
-                          style: TextStyle(fontSize: 12)),
-                      const Spacer(),
-                      DropdownButton<String>(
-                        value: _sourceZone,
-                        items: ['WIB', 'WITA', 'WIT', 'London']
-                            .map((z) => DropdownMenuItem(
-                                  value: z,
-                                  child: Text(z,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold)),
-                                ))
-                            .toList(),
-                        onChanged: (val) {
-                          if (val != null) setState(() => _sourceZone = val);
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // ── Hasil Konversi 4 Zona Waktu Serempak (RF-006) ──
-          const Text('Waktu Serempak di 4 Zona:',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-
-          _zoneCard('🇮🇩 WIB (Waktu Indonesia Barat)', 'Asia/Jakarta (UTC+7)',
-              allZones['WIB'] ?? '', Icons.location_city),
-          _zoneCard('🇮🇩 WITA (Waktu Indonesia Tengah)', 'Asia/Makassar (UTC+8)',
-              allZones['WITA'] ?? '', Icons.sunny),
-          _zoneCard('🇮🇩 WIT (Waktu Indonesia Timur)', 'Asia/Jayapura (UTC+9)',
-              allZones['WIT'] ?? '', Icons.wb_twilight),
-          _zoneCard('🇬🇧 London (UK - DST Terhitung)', 'Europe/London (BST/GMT)',
-              allZones['London'] ?? '', Icons.apartment),
-        ],
-      ),
-    );
-  }
-
-  Widget _zoneCard(String title, String subtitle, String time, IconData icon) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
+  Widget _buildMultiZoneTab() {
+    return RefreshIndicator(
+      onRefresh: _fetchAllZoneData,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
+            // Card Info Lokasi & Zona Pengguna
+            Card(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                side: const BorderSide(color: AppColors.primary, width: 1),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: AppColors.primary, size: 22),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                  Text(subtitle, style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant)),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.my_location, color: AppColors.primary),
+                        const SizedBox(width: 10),
+                        const Expanded(child: Text('Status Lokasi Anda', style: TextStyle(fontWeight: FontWeight.bold))),
+                        if (_isLoadingZones)
+                          const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      ],
+                    ),
+                    const Divider(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Zona Waktu:', style: TextStyle(fontSize: 12)),
+                        Text(_currentLocalZone, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('GPS:', style: TextStyle(fontSize: 12)),
+                        Text(_gpsStatus, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-            Text(
-              time.split(', ').last,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
-            ),
+            const SizedBox(height: 20),
+            
+            const Text('Perbandingan Jam & Sholat 5 Zona:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+
+            // Membangun 5 Card Zona
+            _zoneCard('🇮🇩 WIB (Jakarta)', 'Asia/Jakarta (UTC+7)', 7, 'WIB', Icons.location_city),
+            _zoneCard('🇮🇩 WITA (Makassar)', 'Asia/Makassar (UTC+8)', 8, 'WITA', Icons.wb_sunny),
+            _zoneCard('🇮🇩 WIT (Jayapura)', 'Asia/Jayapura (UTC+9)', 9, 'WIT', Icons.wb_twilight),
+            _zoneCard('🇦🇪 UAE (Dubai)', 'Asia/Dubai (UTC+4)', 4, 'UAE', Icons.mosque),
+            _zoneCard('🇬🇧 London (Inggris)', 'Eropa/London (UTC+0)', 0, 'London', Icons.apartment),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _pickDateTime() async {
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: _selectedDateTime,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2035),
+  Widget _zoneCard(String title, String subtitle, int utcOffset, String key, IconData icon) {
+    final prayers = _zonePrayers[key];
+    final timeStr = _getZoneTime(utcOffset);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          children: [
+            // Bagian Atas: Ikon, Nama Zona, dan Jam Besar
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: AppColors.primary, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                    ],
+                  ),
+                ),
+                Text(
+                  timeStr,
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
+                ),
+              ],
+            ),
+            // Bagian Bawah: Baris Jadwal Sholat
+            if (prayers != null) ...[
+              const Padding(padding: EdgeInsets.symmetric(vertical: 10), child: Divider(height: 1)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _miniPrayer('Subuh', prayers['Fajr']),
+                  _miniPrayer('Dzuhur', prayers['Dhuhr']),
+                  _miniPrayer('Ashar', prayers['Asr']),
+                  _miniPrayer('Maghrib', prayers['Maghrib']),
+                  _miniPrayer('Isya', prayers['Isha']),
+                ],
+              ),
+            ] else if (_isLoadingZones) ...[
+              const Padding(
+                padding: EdgeInsets.only(top: 12),
+                child: Text('Memuat jadwal sholat...', style: TextStyle(fontSize: 11, color: Colors.grey, fontStyle: FontStyle.italic)),
+              )
+            ] else ...[
+              const Padding(
+                padding: EdgeInsets.only(top: 12),
+                child: Text('Gagal memuat jadwal', style: TextStyle(fontSize: 11, color: Colors.red, fontStyle: FontStyle.italic)),
+              )
+            ]
+          ],
+        ),
+      ),
     );
+  }
 
-    if (pickedDate != null && mounted) {
-      final pickedTime = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.fromDateTime(_selectedDateTime),
-      );
-
-      if (pickedTime != null) {
-        setState(() {
-          _selectedDateTime = DateTime(
-            pickedDate.year,
-            pickedDate.month,
-            pickedDate.day,
-            pickedTime.hour,
-            pickedTime.minute,
-          );
-        });
-      }
-    }
+  Widget _miniPrayer(String label, String? time) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+        const SizedBox(height: 2),
+        Text(time ?? '-', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+      ],
+    );
   }
 }

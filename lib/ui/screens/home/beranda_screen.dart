@@ -434,7 +434,7 @@ class _BerandaScreenState extends ConsumerState<BerandaScreen> {
                           ),
                           _StitchMenuCard(
                             icon: Icons.currency_exchange_rounded,
-                            label: 'Kurs & Waktu',
+                            label: 'Konverter & Zona Sholat',
                             onTap: () => Navigator.of(context).push(
                               MaterialPageRoute(builder: (_) => const ConverterScreen()),
                             ),
