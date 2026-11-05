@@ -151,7 +151,8 @@ class _ConverterScreenState extends State<ConverterScreen>
                 child: DropdownButtonFormField<String>(
                   initialValue: _fromCurrency,
                   decoration: const InputDecoration(labelText: 'Dari'),
-                  items: ['IDR', 'USD', 'EUR', 'GBP']
+                  // OPSI AED DITAMBAHKAN DI SINI
+                  items: ['IDR', 'USD', 'EUR', 'GBP', 'AED']
                       .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                       .toList(),
                   onChanged: (val) {
@@ -173,7 +174,8 @@ class _ConverterScreenState extends State<ConverterScreen>
                 child: DropdownButtonFormField<String>(
                   initialValue: _toCurrency,
                   decoration: const InputDecoration(labelText: 'Ke'),
-                  items: ['IDR', 'USD', 'EUR', 'GBP']
+                  // OPSI AED DITAMBAHKAN DI SINI
+                  items: ['IDR', 'USD', 'EUR', 'GBP', 'AED']
                       .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                       .toList(),
                   onChanged: (val) {
@@ -223,7 +225,7 @@ class _ConverterScreenState extends State<ConverterScreen>
           const SizedBox(height: 24),
 
           // ── Ringkasan Nilai dalam Semua Mata Uang ──
-          const Text('Konversi Serempak ke 4 Mata Uang:',
+          const Text('Konversi Serempak ke 5 Mata Uang:',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
           const SizedBox(height: 10),
           _currencyRow('🇮🇩 Rupiah Indonesia (IDR):',
@@ -234,6 +236,9 @@ class _ConverterScreenState extends State<ConverterScreen>
               CurrencyUtils.formatCurrency(allConverted['EUR'] ?? 0, 'EUR')),
           _currencyRow('🇬🇧 Pound Sterling Britania (GBP):',
               CurrencyUtils.formatCurrency(allConverted['GBP'] ?? 0, 'GBP')),
+          // BARIS HASIL UNTUK DIRHAM DITAMBAHKAN DI SINI
+          _currencyRow('🇦🇪 Dirham Uni Emirat Arab (AED):',
+              CurrencyUtils.formatCurrency(allConverted['AED'] ?? 0, 'AED')),
         ],
       ),
     );

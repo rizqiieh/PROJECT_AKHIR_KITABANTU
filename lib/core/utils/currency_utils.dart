@@ -13,6 +13,7 @@ class CurrencyUtils {
     'USD': 16000.0,
     'EUR': 17200.0,
     'GBP': 20500.0,
+    'AED': 4275.0,
   };
 
   /// Format angka ke Rupiah standar: `Rp 50.000`
@@ -84,6 +85,7 @@ class CurrencyUtils {
       'USD': convert(amount: amountIdr, fromCurrency: 'IDR', toCurrency: 'USD', ratesToIdr: rates),
       'EUR': convert(amount: amountIdr, fromCurrency: 'IDR', toCurrency: 'EUR', ratesToIdr: rates),
       'GBP': convert(amount: amountIdr, fromCurrency: 'IDR', toCurrency: 'GBP', ratesToIdr: rates),
+      'AED': convert(amount: amountIdr, fromCurrency: 'IDR', toCurrency: 'AED', ratesToIdr: rates),
     };
   }
 }
