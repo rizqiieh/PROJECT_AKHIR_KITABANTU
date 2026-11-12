@@ -107,7 +107,7 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
 
           backgroundColor:
 
-              nowBookmarked ? AppColors.success : const Color.fromRGBO(90, 107, 95, 1),
+              nowBookmarked ? const Color.fromRGBO(46, 125, 50, 1) : const Color.fromRGBO(90, 107, 95, 1),
 
           behavior: SnackBarBehavior.floating,
 
@@ -197,7 +197,7 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
 
                   decoration: BoxDecoration(
 
-                    color: AppColors.primary.withValues(alpha: 0.15),
+                    color: const Color.fromRGBO(79, 130, 104, 1).withValues(alpha: 0.15),
 
                     borderRadius: BorderRadius.circular(8),
 
@@ -223,7 +223,7 @@ class _CampaignDetailScreenState extends ConsumerState<CampaignDetailScreen> {
 
                 const SizedBox(width: 8),
 
-                const Icon(Icons.location_on, size: 16, color: AppColors.primary),
+                const Icon(Icons.location_on, size: 16, color: Color.fromRGBO(79, 130, 104, 1)),
 
                 const SizedBox(width: 4),
 
