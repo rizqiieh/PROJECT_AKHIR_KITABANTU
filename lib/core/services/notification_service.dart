@@ -2,8 +2,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Layanan Notifikasi Lokal (RF-009).
 ///
-/// Memicu notifikasi instan saat donasi berhasil dicatat ke ledger
-/// dan pengingat kampanye donasi.
+/// Memicu notifikasi instan saat donasi berhasil dicatat ke ledger,
+/// pengingat kampanye donasi, top-up, dan pembayaran zakat.
 class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
@@ -26,18 +26,18 @@ class NotificationService {
       requestSoundPermission: true,
     );
 
-    const initSettings = InitializationSettings(
+    final initSettings = const InitializationSettings(
       android: androidSettings,
       iOS: darwinSettings,
     );
 
     await _notificationsPlugin.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: (response) {
+      settings: initSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
         // Callback saat user tap notifikasi
       },
     );
-
+    
     // Minta izin notifikasi di Android 13+ (API 33+)
     await _notificationsPlugin
         .resolvePlatformSpecificImplementation<
@@ -65,7 +65,7 @@ class NotificationService {
       styleInformation: BigTextStyleInformation(''),
     );
 
-    const notificationDetails = NotificationDetails(
+    final notificationDetails = const NotificationDetails(
       android: androidDetails,
       iOS: DarwinNotificationDetails(),
     );
@@ -73,10 +73,10 @@ class NotificationService {
     final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
     await _notificationsPlugin.show(
-      id,
-      '🎉 Donasi Berhasil Dicatat ke Ledger!',
-      'Alhamdulillah, donasi $amountFormatted untuk "$campaignTitle" berhasil diverifikasi dengan Ref: $referenceCode.',
-      notificationDetails,
+      id: id,
+      title: '🎉 Donasi Berhasil Dicatat ke Ledger!',
+      body: 'Alhamdulillah, donasi $amountFormatted untuk "$campaignTitle" berhasil diverifikasi dengan Ref: $referenceCode.',
+      notificationDetails: notificationDetails,
     );
   }
 
@@ -94,7 +94,7 @@ class NotificationService {
       priority: Priority.defaultPriority,
     );
 
-    const notificationDetails = NotificationDetails(
+    final notificationDetails = const NotificationDetails(
       android: androidDetails,
       iOS: DarwinNotificationDetails(),
     );
@@ -102,10 +102,10 @@ class NotificationService {
     final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
     await _notificationsPlugin.show(
-      id,
-      '🔔 Pengingat Kampanye',
-      'Mari luangkan sedikit rezeki untuk "$campaignTitle". Bantuan Anda sangat berarti!',
-      notificationDetails,
+      id: id,
+      title: '🔔 Pengingat Kampanye',
+      body: 'Mari luangkan sedikit rezeki untuk "$campaignTitle". Bantuan Anda sangat berarti!',
+      notificationDetails: notificationDetails,
     );
   }
 
@@ -125,7 +125,7 @@ class NotificationService {
       showWhen: true,
     );
 
-    const notificationDetails = NotificationDetails(
+    final notificationDetails = const NotificationDetails(
       android: androidDetails,
       iOS: DarwinNotificationDetails(),
     );
@@ -133,10 +133,42 @@ class NotificationService {
     final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
     await _notificationsPlugin.show(
-      id,
-      'Top Up Saldo Berhasil! 🎉',
-      'Saldo $amountFormatted telah ditambahkan ke Kantong Amanah. Saldo saat ini: $newBalanceFormatted.',
-      notificationDetails,
+      id: id,
+      title: 'Top Up Saldo Berhasil! 🎉',
+      body: 'Saldo $amountFormatted telah ditambahkan ke Kantong Amanah. Saldo saat ini: $newBalanceFormatted.',
+      notificationDetails: notificationDetails,
+    );
+  }
+
+  /// Notifikasi saat pembayaran Zakat berhasil.
+  Future<void> showZakatSuccessNotification({
+    required String jenisZakat,
+    required String amountFormatted,
+  }) async {
+    await initialize();
+
+    const androidDetails = AndroidNotificationDetails(
+      'zakat_channel',
+      'Pembayaran Zakat',
+      channelDescription: 'Pemberitahuan pemotongan saldo untuk Zakat',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: true,
+      styleInformation: BigTextStyleInformation(''),
+    );
+
+    final notificationDetails = const NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(),
+    );
+
+    final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    await _notificationsPlugin.show(
+      id: id,
+      title: 'Alhamdulillah, Zakat Tertunaikan 🤲',
+      body: '$jenisZakat sebesar $amountFormatted telah berhasil dipotong dari Kantong Amanah.',
+      notificationDetails: notificationDetails,
     );
   }
 }

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:kitabantu/core/utils/hash_utils.dart';
@@ -5,7 +8,6 @@ import 'package:kitabantu/data/local/database_helper.dart';
 import 'package:kitabantu/data/local/secure_storage_service.dart';
 import 'package:kitabantu/data/models/user_model.dart';
 import 'package:kitabantu/data/models/wallet_transaction_model.dart';
-import 'package:flutter/foundation.dart'; // Menyediakan konstanta kIsWeb
 
 // ══════════════════════════════════════════════════════
 //  State
@@ -53,7 +55,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // ── Cek sesi saat aplikasi dimulai (RF-001 & Session Timeout) ──
 
   /// Memeriksa apakah ada sesi aktif di Secure Storage.
-  /// Dipanggil dari SplashScreen saat aplikasi dibuka kembali.
   Future<void> checkSession() async {
     state = state.copyWith(status: AuthStatus.loading);
 
@@ -63,7 +64,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return;
     }
 
-    // ── Periksa apakah sesi telah kedaluwarsa (>= 1 menit tanpa aktivitas) ──
     final isExpired = await _secure.isSessionExpired();
     if (isExpired) {
       await _secure.clearSession();
@@ -89,22 +89,21 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return;
     }
 
-    // Sesi masih valid (< 1 menit)! Perbarui timestamp aktivitas terakhir
     await _secure.updateLastActive();
     state = state.copyWith(status: AuthStatus.authenticated, user: user);
   }
 
   // ── Registrasi (RF-001) ──
 
-  /// Mendaftarkan pengguna baru dengan SHA-256 + salt.
+  /// Mendaftarkan pengguna baru dengan SHA-256 + salt secara instan.
   Future<String?> register({
     required String fullName,
     required String username,
+    String? email,
     required String password,
   }) async {
     state = state.copyWith(status: AuthStatus.loading);
 
-    // Cek duplikat username
     if (await _db.isUsernameTaken(username)) {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
@@ -113,13 +112,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return state.errorMessage;
     }
 
-    // Hash password
     final salt = HashUtils.generateSalt();
     final passwordHash = HashUtils.hashPassword(password, salt);
 
     final user = UserModel(
       fullName: fullName,
       username: username,
+      email: email,
       passwordHash: passwordHash,
       salt: salt,
       biometricEnabled: true,
@@ -131,23 +130,27 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final id = await _db.insertUser(user);
       final savedUser = user.copyWith(id: id);
 
-      // Langsung login setelah register (biometrik aktif otomatis)
-      await _secure.saveSession(
-        userId: id,
-        username: username,
-        fullName: fullName,
-        biometricEnabled: true,
-      );
-      await _secure.updateBiometricEnabled(
-        true,
-        userId: id,
-        username: username,
-      );
-      await _secure.setOnboardingCompleted(true);
-
       state = state.copyWith(
-          status: AuthStatus.authenticated, user: savedUser);
-      return null; // null = sukses
+        status: AuthStatus.authenticated,
+        user: savedUser,
+      );
+
+      unawaited(Future.wait([
+        _secure.saveSession(
+          userId: id,
+          username: username,
+          fullName: fullName,
+          biometricEnabled: true,
+        ),
+        _secure.updateBiometricEnabled(
+          true,
+          userId: id,
+          username: username,
+        ),
+        _secure.setOnboardingCompleted(true),
+      ]));
+
+      return null;
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
@@ -157,36 +160,36 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  // ── Login dengan Password (RF-001) ──
+  // ── Login dengan Password (Mendukung Username atau Email) ──
 
-  /// Login menggunakan username dan password.
+  /// Login menggunakan identifier (bisa username atau email) dan password.
   Future<String?> login({
     required String username,
     required String password,
   }) async {
-    // Bypass khusus Flutter Web (Chrome) agar tidak memicu error SQLite
     if (kIsWeb) {
       state = state.copyWith(
         status: AuthStatus.authenticated,
         user: UserModel(
           id: 1,
           username: username,
-          fullName: 'Maulana Rizqi Ma\'rufi',
+          fullName: 'Pengguna Web',
           passwordHash: '',
           salt: '',
           createdAt: DateTime.now().toIso8601String(),
         ),
       );
-      return null; // Sukses login di web
+      return null;
     }
 
     state = state.copyWith(status: AuthStatus.loading);
 
-    final user = await _db.getUserByUsername(username);
+    // Cari akun berdasarkan username ATAU email
+    final user = await _db.getUserByIdentifier(username);
     if (user == null) {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
-        errorMessage: 'Username tidak ditemukan.',
+        errorMessage: 'Email atau Username tidak ditemukan.',
       );
       return state.errorMessage;
     }
@@ -194,48 +197,41 @@ class AuthNotifier extends StateNotifier<AuthState> {
     if (!HashUtils.verifyPassword(password, user.salt, user.passwordHash)) {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
-        errorMessage: 'Password salah.',
+        errorMessage: 'Kata sandi salah.',
       );
       return state.errorMessage;
     }
 
-    final canUseBio = await canUseBiometric();
-    if (canUseBio) {
-      await _db.updateBiometricEnabled(user.id!, true);
-      await _secure.updateBiometricEnabled(true, userId: user.id!, username: user.username);
-    }
+    state = state.copyWith(status: AuthStatus.authenticated, user: user);
 
     await _secure.saveSession(
       userId: user.id!,
       username: user.username,
       fullName: user.fullName,
-      biometricEnabled: canUseBio ? true : user.biometricEnabled,
+      biometricEnabled: user.biometricEnabled,
       avatarPath: user.avatarPath,
     );
 
-    final currentUser = canUseBio ? user.copyWith(biometricEnabled: true) : user;
-    state = state.copyWith(status: AuthStatus.authenticated, user: currentUser);
     return null;
   }
 
-  // ── Reset Password (Lupa Kata Sandi) ──
+  // ── Reset Password ──
 
-  /// Memperbarui kata sandi baru untuk pengguna terdaftar.
   Future<String?> resetPassword({
     required String username,
     required String newPassword,
   }) async {
-    final user = await _db.getUserByUsername(username);
+    final user = await _db.getUserByIdentifier(username);
     if (user == null) {
-      return 'Username "$username" tidak ditemukan di sistem.';
+      return 'Akun "$username" tidak ditemukan di sistem.';
     }
 
     final newSalt = HashUtils.generateSalt();
     final newPasswordHash = HashUtils.hashPassword(newPassword, newSalt);
 
-    final updated = await _db.updatePassword(username, newPasswordHash, newSalt);
+    final updated = await _db.updatePassword(user.username, newPasswordHash, newSalt);
     if (updated > 0) {
-      return null; // Sukses reset
+      return null;
     } else {
       return 'Gagal memperbarui kata sandi. Silakan coba lagi.';
     }
@@ -243,7 +239,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   // ── Login dengan Biometrik (RF-002) ──
 
-  /// Memeriksa apakah perangkat mendukung biometrik.
   Future<bool> canUseBiometric() async {
     try {
       final isAvailable = await _localAuth.canCheckBiometrics;
@@ -254,12 +249,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Login menggunakan sidik jari / wajah.
-  /// Berfungsi baik saat aplikasi baru dibuka, setelah logout manual, maupun setelah session timeout.
   Future<String?> loginWithBiometric() async {
     state = state.copyWith(status: AuthStatus.loading);
 
-    // 1. Cek ketersediaan sensor perangkat
     final canUse = await canUseBiometric();
     if (!canUse) {
       state = state.copyWith(
@@ -269,12 +261,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return state.errorMessage;
     }
 
-    // 2. Cek apakah ada profil/user yang mengaktifkan biometrik
     bool isBiometricActive = await _secure.isBiometricEnabled();
     int? targetUserId =
         await _secure.getBiometricUserId() ?? await _secure.getSessionUserId();
 
-    // Fallback: periksa pengguna terakhir yang mengaktifkan biometrik di SQLite lokal
     if (!isBiometricActive || targetUserId == null) {
       final bioUser = await _db.getLastUserWithBiometric();
       if (bioUser != null && bioUser.id != null) {
@@ -298,7 +288,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
 
     try {
-      // 3. Panggil dialog pemindai sidik jari bawaan OS
       final authenticated = await _localAuth.authenticate(
         localizedReason: 'Pindai sidik jari atau wajah untuk masuk ke KitaBantu',
         options: const AuthenticationOptions(
@@ -315,7 +304,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return state.errorMessage;
       }
 
-      // 4. Lanjutkan ambil data user dari SQLite berdasarkan targetUserId
       final user = await _db.getUserById(targetUserId);
 
       if (user == null) {
@@ -323,7 +311,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return 'Akun pengguna belum terdaftar di database lokal.';
       }
 
-      // 5. Simpan kembali sesi aktif setelah sidik jari lolos
       await _secure.saveSession(
         userId: user.id!,
         username: user.username,
@@ -333,7 +320,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
 
       state = state.copyWith(status: AuthStatus.authenticated, user: user);
-      return null; // Berhasil login
+      return null;
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
@@ -345,13 +332,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   // ── Toggle Biometrik (RF-002) ──
 
-  /// Mengaktifkan atau menonaktifkan login biometrik.
   Future<bool> toggleBiometric(bool enable) async {
     final user = state.user;
     if (user == null || user.id == null) return false;
 
     if (enable) {
-      // Validasi biometrik dulu sebelum mengaktifkan
       final canUse = await canUseBiometric();
       if (!canUse) return false;
 
@@ -401,7 +386,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   // ── Saldo Kantong Amanah & Top Up (SQLite) ──
 
-  /// Melakukan Top Up saldo ke Kantong Amanah pengguna.
   Future<bool> topUpBalance(double amount, {String method = 'QRIS'}) async {
     final user = state.user;
     if (user == null || user.id == null || amount <= 0) return false;
@@ -425,7 +409,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     return true;
   }
 
-  /// Memotong saldo pengguna saat berdonasi.
   Future<bool> deductBalance(
     double amount, {
     required String description,
@@ -433,7 +416,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }) async {
     final user = state.user;
     if (user == null || user.id == null || amount <= 0) return false;
-    if (user.balance < amount) return false; // Saldo tidak mencukupi
+    if (user.balance < amount) return false;
 
     final newBalance = user.balance - amount;
     await _db.updateUserBalance(user.id!, newBalance);
@@ -456,25 +439,30 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   // ── Logout & Session Timeout (RF-003) ──
 
-  /// Menghapus sesi aktif secara manual saat pengguna menekan tombol Logout.
-  /// Kredensial biometrik tetap tersimpan agar pengguna bisa login kembali dengan sidik jari.
   Future<void> logout() async {
-    await _secure.clearSession();
-    state = const AuthState();
+    try {
+      await _secure.clearSession();
+    } catch (e) {
+      debugPrint('Gagal menghapus sesi: $e');
+    } finally {
+      state = const AuthState();
+    }
   }
 
-  /// Logout otomatis akibat tidak ada aktivitas selama 1 menit (Session Timeout).
-  /// Kredensial biometrik tetap tersimpan agar pengguna bisa login kembali dengan sidik jari.
   Future<void> logoutDueToInactivity() async {
-    await _secure.clearSession();
-    state = const AuthState(
-      status: AuthStatus.unauthenticated,
-      errorMessage:
-          'Sesi Anda telah berakhir karena tidak ada aktivitas selama 1 menit.',
-    );
+    try {
+      await _secure.clearSession();
+    } catch (e) {
+      debugPrint('Gagal menghapus sesi: $e');
+    } finally {
+      state = const AuthState(
+        status: AuthStatus.unauthenticated,
+        errorMessage:
+            'Sesi Anda telah berakhir karena tidak ada aktivitas selama 1 menit.',
+      );
+    }
   }
 
-  /// Memperbarui timestamp aktivitas saat pengguna berinteraksi.
   Future<void> recordUserActivity() async {
     if (state.status == AuthStatus.authenticated) {
       await _secure.updateLastActive();

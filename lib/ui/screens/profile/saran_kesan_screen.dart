@@ -114,16 +114,24 @@ class _SaranKesanScreenState extends ConsumerState<SaranKesanScreen> {
   }
 
   // ───────────────────────── Header ──────────────────────────────────────────
-  Widget _buildTopBar() => const Row(
-        children: [
-          Icon(Icons.volunteer_activism, color: AppColors.primary, size: 28),
-          SizedBox(width: 8),
-          Text('KitaBantu',
-              style: TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.w800, color: _ink)),
-        ],
-      );
-
+  Widget _buildTopBar() => Row( // Hapus const di sini
+  children: [
+    Image.asset(
+      'assets/images/LogoKitaBantu.png',
+      width: 32,
+      height: 32,
+    ),
+    const SizedBox(width: 8), // Tambahkan const di sini
+    Text(
+      'KitaBantu',
+      style: TextStyle(
+        fontSize: 20, 
+        fontWeight: FontWeight.w800, 
+        color: _ink, // Pastikan _ink tidak error, jika error hapus const di Text ini
+      ),
+    ),
+  ],
+);
   // ───────────────────────── Kartu formulir ──────────────────────────────────
   Widget _buildFormCard() => _card(
         child: Form(
@@ -220,7 +228,7 @@ class _SaranKesanScreenState extends ConsumerState<SaranKesanScreen> {
                 child: ElevatedButton(
                   onPressed: _submitForm,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: const Color.fromARGB(255, 38, 78, 57),
                     foregroundColor: Colors.white,
                     minimumSize: const Size.fromHeight(52),
                     shape: RoundedRectangleBorder(

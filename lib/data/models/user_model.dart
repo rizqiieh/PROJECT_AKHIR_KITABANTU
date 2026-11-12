@@ -2,6 +2,7 @@
 class UserModel {
   final int? id;
   final String fullName;
+  final String? email;
   final String username;
   final String passwordHash;
   final String salt;
@@ -12,6 +13,7 @@ class UserModel {
 
   const UserModel({
     this.id,
+    this.email,
     required this.fullName,
     required this.username,
     required this.passwordHash,
@@ -28,6 +30,7 @@ class UserModel {
       id: map['id'] as int?,
       fullName: map['full_name'] as String,
       username: map['username'] as String,
+      email: map['email'] as String?,
       passwordHash: map['password_hash'] as String,
       salt: map['salt'] as String,
       avatarPath: map['avatar_path'] as String?,
@@ -43,6 +46,7 @@ class UserModel {
       if (id != null) 'id': id,
       'full_name': fullName,
       'username': username,
+      'email': email,
       'password_hash': passwordHash,
       'salt': salt,
       'avatar_path': avatarPath,

@@ -21,12 +21,22 @@ class DatabaseHelper {
 
   Future<Database> _initDB() async {
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'kitabantu_local.db');
+    final path = join(dbPath, 'kitabantu_local_v2.db');
     return openDatabase(
       path,
       version: 3,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
+    );
+  }
+
+  Future<int> updateUserAvatar(int userId, String avatarPath) async {
+    final db = await database;
+    return await db.update(
+      'users',
+      {'avatar_path': avatarPath},
+      where: 'id = ?',
+      whereArgs: [userId],
     );
   }
 
@@ -36,14 +46,15 @@ class DatabaseHelper {
       CREATE TABLE users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         full_name TEXT NOT NULL,
-        username TEXT UNIQUE NOT NULL,
+        username TEXT NOT NULL UNIQUE,
+        email TEXT,
         password_hash TEXT NOT NULL,
         salt TEXT NOT NULL,
         avatar_path TEXT,
         biometric_enabled INTEGER DEFAULT 1,
-        balance REAL DEFAULT 1000000.0,
+        balance REAL DEFAULT 0,
         created_at TEXT NOT NULL
-      )
+      );
     ''');
 
     // 2. Tabel Bookmark Kampanye (RF-004)
@@ -118,6 +129,9 @@ class DatabaseHelper {
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
+      try {
+        await db.execute('ALTER TABLE users ADD COLUMN email TEXT;');
+      } catch (_) {}
       await db.execute('''
         CREATE TABLE IF NOT EXISTS ledger_entries (
           block_index INTEGER PRIMARY KEY,
@@ -162,12 +176,29 @@ class DatabaseHelper {
         conflictAlgorithm: ConflictAlgorithm.abort);
   }
 
+  /// Cari pengguna berdasarkan username atau email
+  Future<UserModel?> getUserByIdentifier(String identifier) async {
+    final db = await database;
+    final clean = identifier.trim().toLowerCase();
+    final List<Map<String, dynamic>> maps = await db.query(
+      'users',
+      where: 'LOWER(username) = ? OR LOWER(email) = ?',
+      whereArgs: [clean, clean],
+      limit: 1,
+    );
+
+    if (maps.isNotEmpty) {
+      return UserModel.fromMap(maps.first);
+    }
+    return null;
+  }
+
   Future<UserModel?> getUserByUsername(String username) async {
     final db = await database;
     final result = await db.query(
       'users',
       where: 'username = ?',
-      whereArgs: [username],
+      whereArgs: [username.trim()],
       limit: 1,
     );
     if (result.isEmpty) return null;

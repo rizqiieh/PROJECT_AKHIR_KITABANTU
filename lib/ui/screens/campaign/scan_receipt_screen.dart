@@ -58,7 +58,7 @@ class _ScanReceiptScreenState extends State<ScanReceiptScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('AI Smart Scan Nota Medis/Pangan'),
-        backgroundColor: const Color(0xFF2F6533),
+        backgroundColor: const Color.fromARGB(255, 78, 129, 103),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -95,7 +95,7 @@ class _ScanReceiptScreenState extends State<ScanReceiptScreen> {
                 Expanded(
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2F6533),
+                      backgroundColor: const Color.fromARGB(255, 78, 129, 103),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
